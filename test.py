@@ -5,7 +5,7 @@
 
 from tennis_show import TennisShow
 from bridge import Bridge
-import threading
+from threading import Thread
 import Queue
 
 class TerminalBridge(Bridge):
@@ -18,20 +18,29 @@ class TerminalBridge(Bridge):
         for light in self.lights:
             print light
 
+thread_continuing = True
+
 def main():
     inqueue = Queue.Queue()
     outqueue = Queue.Queue()
     show = TennisShow(TerminalBridge(), inqueue=inqueue, outqueue=outqueue)
 
     def cause_problems():
-        inqueue.put(("swing", { "player": 1 }))
-        threading.Timer(10, cause_problems).start()
+        global thread_continuing
+        while thread_continuing:
+            x = int(raw_input())
+            inqueue.put(("swing", { "player": x }))
 
     # put something new on the inqueue every 10 seconds
-    cause_problems()
+    thread = Thread(target = cause_problems)
+    thread.start()
 
     # run the show
-    show.run(framerate=2)
+    try:
+        show.run(framerate=2)
+    except KeyboardInterrupt:
+        global thread_continuing
+        thread_continuing = False
 
 if __name__ == "__main__":
     main()
