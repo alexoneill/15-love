@@ -21,6 +21,8 @@ class TerminalBridge(Bridge):
 thread_continuing = True
 
 def main():
+    print "Usage: Press 1 for player 1 swing, 2 for player 2 swing (followed by Enter)"
+    print "To quit, press Ctrl+C and then Enter"
     inqueue = Queue.Queue()
     outqueue = Queue.Queue()
     show = TennisShow(TerminalBridge(), inqueue=inqueue, outqueue=outqueue)
@@ -28,8 +30,11 @@ def main():
     def cause_problems():
         global thread_continuing
         while thread_continuing:
-            x = int(raw_input())
-            inqueue.put(("swing", { "player": x }))
+            try:
+                x = int(raw_input())
+                inqueue.put(("swing", { "player": x }))
+            except:
+                pass
 
     # put something new on the inqueue every 10 seconds
     thread = Thread(target = cause_problems)
