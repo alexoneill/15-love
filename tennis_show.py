@@ -3,10 +3,11 @@
 # nroberts 04/10/2017
 
 from show import Show
+from bridge import Bridge
 import random
 
 def sign(x):
-    return 1 if x > 0 else -1 if x < 0 else 0
+    return 1 if x > 0 else -1
 
 def random_color():
     func = lambda: random.randint(0, 255) / 255.0
@@ -16,8 +17,8 @@ class TennisShow(Show):
 
     def init(self):
         # offset of start panel for player 1 and player 2
-        p1_seq = 16
-        p2_seq = 200
+        p1_seq = Bridge.SEQ_LO
+        p2_seq = Bridge.SEQ_HI
 
         p1_color = random_color()
         p2_color = random_color()
@@ -50,8 +51,9 @@ class TennisShow(Show):
             self.actions[name](data)
 
         # Render game objects
+        fade_frames = 4 # frames
         for obj in self.game_objs:
-            self.render_with_fade(obj)
+            obj.render(self.bridge, fade_frames)
 
         # check for hitting the ball
         self.check_for_hit(self.p1)
@@ -86,21 +88,13 @@ class TennisShow(Show):
             elif player.velocity < 0 and ball.velocity > 0 and bseq >= pseq:
                 ball.velocity = -ball.velocity
 
-    def render_with_fade(self, game_obj):
-        if game_obj.is_active:
-            x = game_obj.get_seq()
-            fade_frames = 4 # frames
-
-            # Fill in squares we skipped over due to velocity
-            for i in xrange(x, x - game_obj.velocity, -sign(game_obj.velocity)):
-                self.bridge.set_fade(i, game_obj.color, fade_frames)
-
-# Common abstract class for objects with location, color, and starting point
-class GameObject(object):
-    def __init__(self, origin, color, **kwargs):
+# Common abstract class for objects with location, color, starting point, and velocity
+class MovingObject(object):
+    def __init__(self, origin, color, velocity, **kwargs):
         self.color = color
         self.origin = origin
         self.x = None # offset from origin, in sequences
+        self.velocity = velocity
         self.is_active = False
         self.init(**kwargs)
 
@@ -112,17 +106,25 @@ class GameObject(object):
         """ Override me! """
         raise NotImplementedError
 
-    # returns current sequence number based on how far between lo and hi
+    def render(self, bridge, fade_frames):
+        if self.is_active:
+            seq = self.get_seq()
+            prev_seq = int(self.origin + self.x - self.velocity)
+
+            # also light up the panels that were skipped in last velocity update
+            for i in xrange(seq, prev_seq, -sign(self.velocity)):
+                bridge.set_fade(i, self.color, fade_frames)
+
+    # returns current sequence
     def get_seq(self):
         return int(self.origin + self.x)
 
 # Class that represents ball state, including velocity and location
-class Ball(GameObject):
+class Ball(MovingObject):
     # max_seq is the furthest sequence the ball is allowed to go to
-    def init(self, max_seq, velocity):
+    def init(self, max_seq):
         self.max_range = max_seq - self.origin
         self.x = 0
-        self.velocity = velocity # sequence per frame
 
     def update(self):
         if self.is_active:
@@ -131,9 +133,8 @@ class Ball(GameObject):
                 self.is_active = False
 
 # Class that represents where the player's state, including swing location
-class Player(GameObject):
-    def init(self, max_swing, velocity):
-        self.velocity = velocity # sequences per frame
+class Player(MovingObject):
+    def init(self, max_swing):
         self.score = 0
         self.max_swing = max_swing # number of panels the swing spans
         self.serving = False

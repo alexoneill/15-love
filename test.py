@@ -15,7 +15,7 @@ class TerminalBridge(Bridge):
     def paint(self):
         print "Painting bridge"
         # Print informative message to the terminal
-        for light in self.lights:
+        for light in self.lights():
             print light
 
 thread_continuing = True
@@ -34,6 +34,7 @@ def main():
                 x = int(raw_input())
                 inqueue.put(("swing", { "player": x }))
             except:
+                # error reading int
                 pass
 
     # put something new on the inqueue every 10 seconds
@@ -42,7 +43,7 @@ def main():
 
     # run the show
     try:
-        show.run(framerate=2)
+        show.run(framerate=40)
     except KeyboardInterrupt:
         global thread_continuing
         thread_continuing = False
