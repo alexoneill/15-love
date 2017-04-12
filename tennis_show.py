@@ -65,16 +65,19 @@ class TennisShow(Show):
 
     # swing event received
     def swing(self, data):
-        def player_swing(player):
+        def player_swing(player, opponent):
             player.swing()
-            if player.serving:
-                self.ball.is_active = True
+            ball = self.ball
+            # serve if it is your turn to serve
+            if player.serving and not ball.is_active:
+                player.serve(ball)
+                opponent.serving = True
                 player.serving = False
 
         if data["player"] == 1:
-            player_swing(self.p1)
+            player_swing(self.p1, opponent=self.p2)
         elif data["player"] == 2:
-            player_swing(self.p2)
+            player_swing(self.p2, opponent=self.p1)
 
     def check_for_hit(self, player):
         ball = self.ball
@@ -82,11 +85,11 @@ class TennisShow(Show):
             pseq = player.get_seq()
             bseq = ball.get_seq()
 
-            # switch direction of ball if it was hit
+            # hit ball if it has crossed where the player is swinging
             if player.velocity > 0 and ball.velocity < 0 and bseq <= pseq:
-                ball.velocity = -ball.velocity
+                ball.hit()
             elif player.velocity < 0 and ball.velocity > 0 and bseq >= pseq:
-                ball.velocity = -ball.velocity
+                ball.hit()
 
 # Common abstract class for objects with location, color, starting point, and velocity
 class MovingObject(object):
@@ -125,12 +128,17 @@ class Ball(MovingObject):
     def init(self, max_seq):
         self.max_range = max_seq - self.origin
         self.x = 0
+        self.starting_velocity = self.velocity
 
     def update(self):
         if self.is_active:
             self.x += self.velocity
             if self.x < 0 or self.x > self.max_range:
                 self.is_active = False
+
+    def hit(self):
+        # change direction when hit
+        self.velocity = -self.velocity
 
 # Class that represents where the player's state, including swing location
 class Player(MovingObject):
@@ -144,6 +152,12 @@ class Player(MovingObject):
             return
         self.is_active = True
         self.x = 0
+
+    def serve(self, ball):
+        # set ball to active with new velocity
+        ball.velocity = ball.starting_velocity * self.velocity
+        ball.x = 0 if ball.velocity > 0 else ball.max_range
+        ball.is_active = True
 
     def update(self):
         if self.is_active:

@@ -13,7 +13,7 @@ class TerminalBridge(Bridge):
         print "Initializing terminal bridge..."
 
     def paint(self):
-        print "Painting bridge"
+        # print "Painting bridge"
         # Print informative message to the terminal
         for light in self.lights():
             print light
