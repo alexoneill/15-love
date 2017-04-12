@@ -5,6 +5,9 @@
 from show import Show
 import random
 
+def sign(x):
+    return 1 if x > 0 else -1 if x < 0 else 0
+
 def random_color():
     func = lambda: random.randint(0, 255) / 255.0
     return (func(), func(), func())
@@ -14,7 +17,7 @@ class TennisShow(Show):
     def init(self):
         # offset of start panel for player 1 and player 2
         p1_seq = 16
-        p2_seq = 400
+        p2_seq = 200
 
         p1_color = random_color()
         p2_color = random_color()
@@ -23,9 +26,17 @@ class TennisShow(Show):
         # how long to make the swing
         max_swing = 20 # sequences
 
-        self.p1 = Player(color=p1_color, origin=p1_seq, max_swing=max_swing)
-        self.p2 = Player(color=p2_color, origin=p2_seq, max_swing=max_swing)
-        self.ball = Ball(color=ball_color, origin=p1_seq, extreme=p2_seq)
+        p1 = Player(color=p1_color, origin=p1_seq, max_swing=max_swing, velocity=1)
+        p2 = Player(color=p2_color, origin=p2_seq, max_swing=max_swing, velocity=-1)
+        ball = Ball(color=ball_color, origin=p1_seq, max_seq=p2_seq, velocity=3)
+
+        # player 1 serves first
+        p1.serving = True
+
+        self.game_objs = [ p1, p2, ball ]
+
+        # set up instance variables
+        self.p1, self.p2, self.ball = p1, p2, ball
 
         # define event dispatch
         self.actions = { "swing" : self.swing }
@@ -38,41 +49,59 @@ class TennisShow(Show):
             name, data = event
             self.actions[name](data)
 
-        # Render player swings
-        self.render_swing(self.p1)
-        self.render_swing(self.p2)
+        # Render game objects
+        for obj in self.game_objs:
+            self.render_with_fade(obj)
 
-        # Render the ball
-        self.render_ball(self.ball)
+        # check for hitting the ball
+        self.check_for_hit(self.p1)
+        self.check_for_hit(self.p2)
 
-        self.p1.update()
-        self.p2.update()
-        self.ball.update()
+        # Update game objects
+        for obj in self.game_objs:
+            obj.update()
 
+    # swing event received
     def swing(self, data):
+        def player_swing(player):
+            player.swing()
+            if player.serving:
+                self.ball.is_active = True
+                player.serving = False
+
         if data["player"] == 1:
-            self.p1.swing()
+            player_swing(self.p1)
         elif data["player"] == 2:
-            self.p2.swing()
+            player_swing(self.p2)
 
-    def render_swing(self, player):
-        if player.is_swinging:
-            x = player.get_seq()
+    def check_for_hit(self, player):
+        ball = self.ball
+        if player.is_active and ball.is_active:
+            pseq = player.get_seq()
+            bseq = ball.get_seq()
+
+            # switch direction of ball if it was hit
+            if player.velocity > 0 and ball.velocity < 0 and bseq <= pseq:
+                ball.velocity = -ball.velocity
+            elif player.velocity < 0 and ball.velocity > 0 and bseq >= pseq:
+                ball.velocity = -ball.velocity
+
+    def render_with_fade(self, game_obj):
+        if game_obj.is_active:
+            x = game_obj.get_seq()
             fade_frames = 4 # frames
-            self.bridge.set_fade(x, player.color, fade_frames)
 
-    def render_ball(self, ball):
-        if ball.in_play:
-            x = ball.get_seq()
-            fade_frames = 4 # frames
-            self.bridge_set_fade(x, ball.color, fade_frames)
+            # Fill in squares we skipped over due to velocity
+            for i in xrange(x, x - game_obj.velocity, -sign(game_obj.velocity)):
+                self.bridge.set_fade(i, game_obj.color, fade_frames)
 
+# Common abstract class for objects with location, color, and starting point
 class GameObject(object):
-
     def __init__(self, origin, color, **kwargs):
         self.color = color
         self.origin = origin
         self.x = None # offset from origin, in sequences
+        self.is_active = False
         self.init(**kwargs)
 
     def init(self):
@@ -87,41 +116,39 @@ class GameObject(object):
     def get_seq(self):
         return int(self.origin + self.x)
 
+# Class that represents ball state, including velocity and location
 class Ball(GameObject):
-    # extreme is the furthest sequence the ball is allowed to go to
-    def init(self, extreme):
-        self.max_range = extreme - self.origin
-        self.in_play = False
+    # max_seq is the furthest sequence the ball is allowed to go to
+    def init(self, max_seq, velocity):
+        self.max_range = max_seq - self.origin
         self.x = 0
-        self.v = 1 # sequence per frame
+        self.velocity = velocity # sequence per frame
 
     def update(self):
-        if self.in_play:
-            self.x += self.v
+        if self.is_active:
+            self.x += self.velocity
             if self.x < 0 or self.x > self.max_range:
-                self.in_play = False
+                self.is_active = False
 
+# Class that represents where the player's state, including swing location
 class Player(GameObject):
-    def init(self, max_swing):
+    def init(self, max_swing, velocity):
+        self.velocity = velocity # sequences per frame
         self.score = 0
-        self.max_swing = abs(max_swing)
-        self.facing_right = max_swing > 0
-        self.is_swinging = False
+        self.max_swing = max_swing # number of panels the swing spans
+        self.serving = False
 
     def swing(self):
-        if self.is_swinging:
+        if self.is_active:
             return
-        self.is_swinging = True
+        self.is_active = True
         self.x = 0
 
     def update(self):
-        if self.is_swinging:
+        if self.is_active:
             # advance swing in positive or negative direction
-            if self.facing_right:
-                self.x += 1 # sequence per frame
-            else:
-                self.x -= 1 # sequence per frame
+            self.x += self.velocity
 
             # check if the swing is in the right range
             if abs(self.x) >= self.max_swing:
-                self.is_swinging = False
+                self.is_active = False
