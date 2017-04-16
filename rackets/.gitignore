@@ -1,0 +1,5 @@
+# .gitignore
+# aoneill - 04/16/17
+
+# Ignore generated files
+libs
