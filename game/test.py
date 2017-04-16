@@ -21,6 +21,7 @@ class TerminalBridge(Bridge):
 thread_continuing = True
 
 def main():
+    global thread_continuing
     print "Usage: Press 1 for player 1 swing, 2 for player 2 swing (followed by Enter)"
     print "To quit, press Ctrl+C and then Enter"
     inqueue = Queue.Queue()
@@ -44,11 +45,8 @@ def main():
     # run the show
     try:
         show.run(framerate=40)
-    except KeyboardInterrupt:
-        pass
-
-    global thread_continuing
-    thread_continuing = False
+    finally:
+        thread_continuing = False
 
 if __name__ == "__main__":
     main()
