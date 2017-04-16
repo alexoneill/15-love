@@ -19,7 +19,7 @@ class LightTimer(object):
         if isinstance(self.fade_frames, int):
             self.fade_frames -= 1
             # fade by halving distance to 255 for r, g, and b
-            fade_color = lambda v: v + (255 - v) // 2
+            fade_color = lambda v: 0.8 * v
             self.color = tuple(map(fade_color, self.color))
             if self.fade_frames == 0:
                 # then we have to send a clear command
@@ -33,7 +33,7 @@ class LightTimer(object):
         top_bot_str += "B" if self.bot else ""
         r, g, b = self.color
         return "sequence: {}; top/bot: {}; color: {}, {}, {}".format(
-                 self.sequence, top_bot_str, int(r), int(g), int(b)
+                 self.sequence, top_bot_str, r, g, b
                )
 
 class Bridge(object):
@@ -50,11 +50,11 @@ class Bridge(object):
     # Fade affected timers once
     def update(self):
         for k in self.timers.keys():
-            for timer in self.timers[k]:
+            for timer, _ in self.timers[k]:
                 timer.fade()
 
             # remove faded timers
-            timers = [ t for t in self.timers[k] if not t.is_faded() ]
+            timers = [ t for t in self.timers[k] if not t[0].is_faded() ]
             if timers:
                 self.timers[k] = timers
             else:
@@ -62,15 +62,15 @@ class Bridge(object):
 
         self.paint()
 
-    def set_fade(self, sequence, color, fade_frames):
+    def set_fade(self, sequence, color, fade_frames, priority):
         # Set both top and bottom lights to that color (hence True/False)
         timer = LightTimer(sequence, True, True, color, fade_frames)
-        self.add(sequence, timer)
+        self.add(sequence, (timer, priority))
 
-    def set_on(self, sequence, color):
+    def set_on(self, sequence, color, priority):
         # set both top and bottom lights to that color, with no timeout
         timer = LightTimer(sequence, True, True, color, None)
-        self.add(sequence, timer)
+        self.add(sequence, (timer, priority))
 
     def set_off(self, sequence):
         self.timers[sequence] = []
@@ -90,32 +90,16 @@ class Bridge(object):
     def lights(self):
         for sequence, timers in self.timers.iteritems():
             if len(timers) == 1:
-                yield timers[0]
+                yield timers[0][0]
             else:
-                num_top, num_bot = 0, 0
-                rsum_top, bsum_top, gsum_top = 0, 0, 0
-                rsum_bot, bsum_bot, gsum_bot = 0, 0, 0
-
+                max_priority = 0
+                max = None
                 # count r, g, and b values on top and bottom
-                for timer in timers:
-                    r, g, b = timer.color
-                    if timer.top:
-                        num_top += 1
-                        rsum_top += r
-                        gsum_top += g
-                        bsum_top += b
-                    if timer.bot:
-                        num_bot += 1
-                        rsum_bot += r
-                        gsum_bot += g
-                        bsum_bot += b
-
-                if num_top:
-                    color = rsum_top // num_top, gsum_top // num_top, bsum_top // num_top
-                    yield LightTimer(sequence, True, False, color, None)
-                if num_bot:
-                    color = rsum_bot // num_bot, gsum_bot // num_bot, bsum_bot // num_bot
-                    yield LightTimer(sequence, False, True, color, None)
+                for timer, priority in timers:
+                    if priority > max_priority:
+                        max = timer
+                        max_priority = priority
+                yield max
 
     def init(self):
         """ Override me! """
