@@ -1,3 +1,3 @@
-# `tk-bridge`
+# `rackets`
 
-A simple visualizer for the bridge
+A client application for players
