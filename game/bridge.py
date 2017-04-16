@@ -50,11 +50,11 @@ class Bridge(object):
     # Fade affected timers once
     def update(self):
         for k in self.timers.keys():
-            for timer, _ in self.timers[k]:
+            for timer, __ in self.timers[k]:
                 timer.fade()
 
-            # remove faded timers
-            timers = [ t for t in self.timers[k] if not t[0].is_faded() ]
+            # remove faded timers, decrease priority
+            timers = [ (t, 0.5 * p) for t, p in self.timers[k] if not t.is_faded() ]
             if timers:
                 self.timers[k] = timers
             else:

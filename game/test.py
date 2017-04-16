@@ -16,7 +16,8 @@ class TerminalBridge(Bridge):
         # print "Painting bridge"
         # Print informative message to the terminal
         for light in self.lights():
-            print light
+            #print light
+            pass
 
 thread_continuing = True
 
