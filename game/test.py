@@ -45,8 +45,10 @@ def main():
     try:
         show.run(framerate=40)
     except KeyboardInterrupt:
-        global thread_continuing
-        thread_continuing = False
+        pass
+
+    global thread_continuing
+    thread_continuing = False
 
 if __name__ == "__main__":
     main()
