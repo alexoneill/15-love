@@ -32,7 +32,7 @@ class LightTimer(object):
         top_bot_str = "T" if self.top else ""
         top_bot_str += "B" if self.bot else ""
         r, g, b = self.color
-        return "sequence: {}; top/bot: {}; color: {}, {}, {}".format(
+        return "sequence: %d; top/bot: %s; color: %0.3f, %0.3f, %0.3f" % (
                  self.sequence, top_bot_str, r, g, b
                )
 

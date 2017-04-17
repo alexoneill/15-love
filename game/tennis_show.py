@@ -10,7 +10,7 @@ import random
 # print diagnostic information for unrecognized event
 def unrecognized_event(name):
     def print_error(data):
-        print "Unrecognized event. Name: {}, Data: {}".format(name, data)
+        print "Unrecognized event. Name: %s, Data: %s" % (name, data)
     return print_error
 
 def random_color():
@@ -161,7 +161,7 @@ class TennisShow(Show):
         player = self.players[awarded_player]
         player.score += 1
 
-        print "Player {} now has score {}".format(awarded_player, player.score)
+        print "Player %d now has score %d" % (awarded_player, player.score)
 
         # TODO: Display score in some way on the bridge
 
