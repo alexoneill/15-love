@@ -63,7 +63,7 @@ class ScoreBars(Animation):
             self.x = self.end_x
             self.velocity = 0
             self.frames_till_end = 40
-            print "Score reached destination at {}".format(self.x)
+            print "Score reached destination at %d" % self.x
 
         # run until dead
         if self.velocity == 0:
@@ -175,7 +175,7 @@ class Ball(Animation):
         if self.is_active:
             self.x += self.velocity
             if self.x < self.origin or self.x > self.max_seq:
-                print "Ball has been missed at location {}".format(self.x)
+                print "Ball has been missed at location %d" % self.x
                 self.is_active = False
 
                 # player who got the point
@@ -208,7 +208,7 @@ class Player(Animation):
         ball.velocity = ball.starting_velocity * self.velocity
         ball.x =  self.origin
         print "Player hit ball"
-        print "Ball starting at {}, moving in direction {}".format(ball.x, ball.velocity)
+        print "Ball starting at %d, moving with velocity %d" % (ball.x, ball.velocity)
         ball.is_active = True
 
     def update(self, show):
@@ -218,5 +218,5 @@ class Player(Animation):
 
             # check if the swing is in the right range
             if abs(self.x - self.origin) >= self.max_swing:
-                print "Player done swinging at {}".format(self.x)
+                print "Player done swinging at %d" % self.x
                 self.is_active = False
