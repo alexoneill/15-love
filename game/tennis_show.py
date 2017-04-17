@@ -35,9 +35,9 @@ class TennisShow(Show):
         # how long to make the swing
         max_swing = 30 # sequences
 
-        p1 = Player(color=p1_color, origin=p1_seq, max_swing=max_swing, velocity=2)
-        p2 = Player(color=p2_color, origin=p2_seq, max_swing=max_swing, velocity=-2)
-        ball = Ball(color=ball_color, origin=p1_seq, max_seq=p2_seq, velocity=4)
+        p1 = Player(color=p1_color, origin=p1_seq, max_swing=max_swing, velocity=1)
+        p2 = Player(color=p2_color, origin=p2_seq, max_swing=max_swing, velocity=-1)
+        ball = Ball(color=ball_color, origin=p1_seq, max_seq=p2_seq, velocity=3)
 
         # player 1 serves first
         p1.serving = True
