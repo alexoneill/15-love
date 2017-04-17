@@ -163,6 +163,9 @@ class TennisShow(Show):
 
         print "Player %d now has score %d" % (awarded_player, player.score)
 
+        # stop running game loop
+        del self.actions["game_loop"]
+
         # TODO: Display score in some way on the bridge
 
         # what to do after showing red animation
