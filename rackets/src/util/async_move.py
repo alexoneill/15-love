@@ -7,12 +7,23 @@ import time
 from libs import psmove
 
 class AsyncPSMove(threading.Thread):
-  def __init__(self, num, on_event):
+  '''
+  Asynchronous class designed to update the associated PSMove controller
+  at a pre-defined frame rate.
+
+  This avoids having the controller lose its light / rumble after not having
+  received an update recently
+  '''
+
+  # Updates per second
+  FPS = 40.0
+
+  def __init__(self, num):
+    # Initialize all internal state
     super(AsyncPSMove, self).__init__()
 
     self.num = num
     self.move = psmove.PSMove(num)
-    self.on_event = on_event
 
     self._running = True
     self._leds = (0, 0, 0)
@@ -71,7 +82,7 @@ class AsyncPSMove(threading.Thread):
       self.move.update_leds()
 
       # 40 FPS
-      time.sleep(0.025)
+      time.sleep(1.0 / AsyncPSMove.FPS)
 
   def stop(self):
     self._running = False

@@ -4,17 +4,14 @@
 import sys
 
 import async_move
+from libs import psmove
 
-BUTTONS = [
-    psmove.Btn_SQUARE,
-    psmove.Btn_TRIANGLE,
-    psmove.Btn_CROSS,
-    psmove.Btn_CIRCLE,
-]
-
+# Simple bounding method which normalizes an input
 def bound(num, lower, upper):
   return min(upper, max(lower, num))
 
+# Main method for the simple commandline utility for interacting
+# with PSMove controllers
 def main():
   if(psmove.count_connected() == 0):
     print 'err: No controllers connected! See `psmove pair\''
