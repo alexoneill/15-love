@@ -32,7 +32,7 @@ class LightTimer(object):
         top_bot_str = "T" if self.top else ""
         top_bot_str += "B" if self.bot else ""
         r, g, b = self.color
-        return "sequence: {}; top/bot: {}; color: {}, {}, {}".format(
+        return "sequence: %d; top/bot: %s; color: %0.3f, %0.3f, %0.3f" % (
                  self.sequence, top_bot_str, r, g, b
                )
 
@@ -50,11 +50,11 @@ class Bridge(object):
     # Fade affected timers once
     def update(self):
         for k in self.timers.keys():
-            for timer, _ in self.timers[k]:
+            for timer, __ in self.timers[k]:
                 timer.fade()
 
-            # remove faded timers
-            timers = [ t for t in self.timers[k] if not t[0].is_faded() ]
+            # remove faded timers, decrease priority
+            timers = [ (t, 0.5 * p) for t, p in self.timers[k] if not t.is_faded() ]
             if timers:
                 self.timers[k] = timers
             else:
