@@ -4,6 +4,7 @@
 
 from show import Show
 from bridge import Bridge
+from colors import Colors
 from animations import *
 import random
 
@@ -28,9 +29,9 @@ class TennisShow(Show):
         player_priority = 3
         ball_priority = 4
 
-        p1_color = (1.0, 0.5, 0.313) # coral
-        p2_color = (0, 0.75, 1.0) # sky blue
-        ball_color = (0, 1.0, 0.0) # lime
+        p1_color = Colors.CORAL
+        p2_color = Colors.SKY_BLUE
+        ball_color = Colors.LIME
 
         # how long to make the swing
         max_swing = 35 # sequences
@@ -93,7 +94,8 @@ class TennisShow(Show):
         if event:
             name, data = event
             # Python's version of a switch statement? It's event dispatch
-            { "swing" : self.swing }.get(name, unrecognized_event(name))(data)
+            { "swing" : self.swing,
+              "press" : self.press  }.get(name, unrecognized_event(name))(data)
 
         fade_frames = 20 #frames
         for obj in self.moving_objects:
@@ -124,6 +126,18 @@ class TennisShow(Show):
         elif data["player"] == 2:
             print "Player 2 swung"
             player_swing(self.p2, opponent=self.p1)
+
+    # button press event received
+    def press(self, data):
+        player = self.players[data["player"]]
+        if data["shape"] == "square":
+            player.color = Colors.PURPLE
+        elif data["shape"] == "circle":
+            player.color = Colors.CORAL
+        elif data["shape"] == "triangle":
+            player.color = Colors.LIME
+        elif data["shape"] == "x":
+            player.color = Colors.SKY_BLUE
 
     def check_for_hit(self, player):
         ball = self.ball

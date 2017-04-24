@@ -3,6 +3,8 @@
 # nroberts 04/16/2017
 
 from bridge import Bridge
+from colors import Colors
+import random
 
 PLAYER_PRIORITY = 3
 BALL_PRIORITY = 4
@@ -187,6 +189,7 @@ class Ball(Animation):
     def hit(self):
         # change direction when hit
         self.velocity = -self.velocity
+        self.color = random.choice(Colors.ALL) # Set to a random color
 
 # Class that represents where the player's state, including swing location
 class Player(Animation):
