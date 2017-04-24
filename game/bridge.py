@@ -19,7 +19,7 @@ class LightTimer(object):
         if isinstance(self.fade_frames, int):
             self.fade_frames -= 1
             # fade by halving distance to 255 for r, g, and b
-            fade_color = lambda v: 0.8 * v
+            fade_color = lambda v: 0.95 * v
             self.color = tuple(map(fade_color, self.color))
             if self.fade_frames == 0:
                 # then we have to send a clear command
