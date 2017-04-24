@@ -163,6 +163,10 @@ class TennisShow(Show):
 
         print "Player %d now has score %d" % (awarded_player, player.score)
 
+        # stop players from swinging
+        self.p1.is_active = False
+        self.p2.is_active = False
+
         # stop running game loop
         del self.actions["game_loop"]
 
