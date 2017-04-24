@@ -40,6 +40,7 @@ class TextRacket(racket.Racket):
 
   def on_init(self, controller):
     print 'Controller', controller, 'connected!'
+    controller.color = psmoveapi.RGB(1.0, 1.0, 1.0)
 
   def on_refresh(self, controller):
     # This is available for doing other house-keeping, but is unused right now
