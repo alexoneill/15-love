@@ -122,9 +122,11 @@ class TennisShow(Show):
 
         if data["player"] == 1:
             print "Player 1 swung"
+            outqueue.put(("swing", { "player": 1 }))
             player_swing(self.p1, opponent=self.p2)
         elif data["player"] == 2:
             print "Player 2 swung"
+            outqueue.put(("swing", { "player": 2 }))
             player_swing(self.p2, opponent=self.p1)
 
     # button press event received
