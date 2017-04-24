@@ -6,6 +6,57 @@ import time
 
 from libs import psmove
 
+class GenericController(psmoveapi.PSMoveAPI):
+  def on_update(self, controller):
+    self._color = (
+        controller.color.r
+        controller.color.g
+        controller.color.b
+      )
+
+    self._rumble = controller.rumble
+    self._trigger = controller.trigger
+
+    self._accelerometer = (
+        controller.accelerometer.x
+        controller.accelerometer.y
+        controller.accelerometer.z
+      )
+
+    self._gyroscope = (
+        controller.gyroscope.x
+        controller.gyroscope.y
+        controller.gyroscope.z
+      )
+
+    self._magnetometer = (
+        controller.magnetometer.x
+        controller.magnetometer.y
+        controller.magnetometer.z
+      )
+
+    self._battery = controller.battery
+
+    self._buttons = controller.
+    self._pressed = controller.
+    self._released = controller.
+
+
+        print('Update controller:', controller, int(time.time() - controller.connection_time))
+        print(controller.accelerometer, '->', controller.color, 'usb:', controller.usb, 'bt:', controller.bluetooth)
+        up_pointing = min(1, max(0, 0.5 + 0.5 * controller.accelerometer.y))
+        controller.color = psmoveapi.RGB(controller.trigger, up_pointing, 1.0 if controller.usb else 0.0)
+        if controller.now_pressed(psmoveapi.Button.PS):
+            self.quit = True
+
+    def on_disconnect(self, controller):
+        print('Controller disconnected:', controller)
+
+
+api = RedTrigger()
+while not api.quit:
+    api.update()
+
 class AsyncPSMove(threading.Thread):
   def __init__(self, num, on_event):
     super(AsyncPSMove, self).__init__()
