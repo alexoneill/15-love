@@ -206,5 +206,6 @@ class TennisShow(Show):
     def firework_show(self, _):
         print "Showing fireworks"
         winning_player = 1 if self.players[1].score == 4 else 2 # decide which player won
+        self.outqueue.put (("gameover", { "winner": winning_player }))
         # TODO: Make a fun firework show at the end. Maybe design in Lumiverse??
         self.running = False # just end the show for now
