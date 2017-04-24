@@ -181,7 +181,7 @@ class Ball(Animation):
                 self.is_active = False
 
                 # player who got the point
-                awarded_player = 2 if self.x < 0 else 1
+                awarded_player = 2 if self.x <= 0 else 1
 
                 # make the show perform the actions it does when a player misses
                 show.on_missed_ball(awarded_player)
