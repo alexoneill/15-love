@@ -35,11 +35,21 @@ def main(bridge):
     def cause_problems():
         global thread_continuing
         while thread_continuing:
+            inp = raw_input()
             try:
-                x = int(raw_input())
-                inqueue.put(("swing", { "player": x }))
+                x = int(inp[0])
+                if len(inp) > 1:
+                    if inp[1] == "s":
+                        inqueue.put(("press", { "player": x, "shape": "square" }))
+                    elif inp[1] == "t":
+                        inqueue.put(("press", { "player": x, "shape": "triangle" }))
+                    elif inp[1] == "c":
+                        inqueue.put(("press", { "player": x, "shape": "circle" }))
+                    elif inp[1] == "x":
+                        inqueue.put(("press", { "player": x, "shape": "x" }))
+                else:
+                    inqueue.put(("swing", { "player": x }))
             except:
-                # error reading int
                 pass
 
     # put something new on the inqueue every 10 seconds
