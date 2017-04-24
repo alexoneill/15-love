@@ -33,7 +33,7 @@ class TennisShow(Show):
         ball_color = (0, 1.0, 0.0) # lime
 
         # how long to make the swing
-        max_swing = 30 # sequences
+        max_swing = 35 # sequences
 
         p1 = Player(color=p1_color, origin=p1_seq, max_swing=max_swing, velocity=1)
         p2 = Player(color=p2_color, origin=p2_seq, max_swing=max_swing, velocity=-1)
@@ -95,7 +95,7 @@ class TennisShow(Show):
             # Python's version of a switch statement? It's event dispatch
             { "swing" : self.swing }.get(name, unrecognized_event(name))(data)
 
-        fade_frames = 4 #frames
+        fade_frames = 20 #frames
         for obj in self.moving_objects:
           obj.render(self.bridge, fade_frames)
 
