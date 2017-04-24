@@ -1,0 +1,27 @@
+diff --git a/bindings/python/psmoveapi.py b/bindings/python/psmoveapi.py
+index 0fb1d93..9a4159d 100644
+--- a/bindings/python/psmoveapi.py
++++ b/bindings/python/psmoveapi.py
+@@ -147,11 +147,11 @@ class Controller(object):
+         if name != '_controller' and hasattr(self._controller, name):
+             setattr(self._controller, name, value)
+
+-        return super().__setattr__(name, value)
++        return super(Controller, self).__setattr__(name, value)
+
+     def __getattr__(self, name):
+         if name.startswith('_'):
+-            return super().__getattr__(name)
++            return super(Controller, self).__getattr__(name)
+         elif name == 'serial':
+             return self._controller.serial.decode('utf-8')
+         elif name in ('bluetooth', 'usb'):
+@@ -159,7 +159,7 @@ class Controller(object):
+         elif hasattr(self._controller, name):
+             return getattr(self._controller, name)
+
+-        return super().__getattr__(name)
++        return super(Controller, self).__getattr__(name)
+
+
+ class PSMoveAPI(object):
