@@ -145,6 +145,10 @@ class TennisShow(Show):
             pseq = player.get_seq()
             bseq = ball.get_seq()
 
+            # only hit when ball color is same color as player color
+            if player.color != ball.color:
+                return
+
             # hit ball if it has crossed where the player is swinging
             if player.velocity > 0 and ball.velocity < 0 and bseq <= pseq:
                 print "Player 1 hit the ball"
