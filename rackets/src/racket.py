@@ -26,8 +26,8 @@ class Racket(psmoveapi.PSMoveAPI):
   '''
 
   # Thresholds for swing strength
-  SWING_SIZE = 2.0
-  SWING_PAUSE = 1.0
+  SWING_SIZE = 1.5
+  SWING_PAUSE = 0.75
 
   def __init__(self):
     super(Racket, self).__init__()
