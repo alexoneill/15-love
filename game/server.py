@@ -37,7 +37,7 @@ def main(bridge):
     def read():
         global thread_continuing
         while thread_continuing:
-            buf = connection.recv(128)
+            buf = connection.recv(1024)
             if len(buf) > 0:
                 message = pickle.loads(buf)
                 outqueue.put(message)
