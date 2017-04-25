@@ -9,8 +9,7 @@ class SwingState(object):
   '''
   IDLE = 0
   BACKSWING = 1
-  TRANSITION = 2
-  SWING = 3
+  SWING = 2
 
 class Handedness(object):
   '''
@@ -26,8 +25,8 @@ class Racket(psmoveapi.PSMoveAPI):
   '''
 
   # Thresholds for swing strength
-  SWING_SIZE = 1.5
-  SWING_PAUSE = 0.75
+  SWING_PAUSE = 1.5
+  TRIGGER_BACK = 0.5
 
   def __init__(self):
     super(Racket, self).__init__()
@@ -39,35 +38,29 @@ class Racket(psmoveapi.PSMoveAPI):
   def _step_backswing(self, controller):
     # Transition from IDLE to BACKSWING if it makes sense
     if(self._state == SwingState.IDLE):
-      if(controller.accelerometer.length() > Racket.SWING_SIZE):
-        self._state = SwingState.BACKSWING
+      if(controller.accelerometer.length() > Racket.SWING_PAUSE):
+        if(controller.trigger > Racket.TRIGGER_BACK):
+          self._state = SwingState.BACKSWING
 
-        # Assume that the hand stays the same throughout the swing
-        # It would be awkward for the player otherwise
-        self._hand = (
-            Handedness.LEFT if(controller.gyroscope.z > 0) else Handedness.RIGHT
-          )
+          # Assume that the hand stays the same throughout the swing
+          # It would be awkward for the player otherwise
+          self._hand = (
+              Handedness.LEFT if(controller.gyroscope.z > 0)
+                else Handedness.RIGHT
+            )
 
-        # Call our callback if defined
-        (self.on_backswing or (lambda *args: None))(controller, self._hand)
-
-  def _step_transition(self, controller):
-    # Transition from BACKSWING to TRANSITION if it makes sense
-    if(self._state == SwingState.BACKSWING):
-      if(controller.accelerometer.length() < Racket.SWING_PAUSE):
-        self._state = SwingState.TRANSITION
-
-        # Call our callback if defined
-        (self.on_transition or (lambda *args: None))(controller, self._hand)
+          # Call our callback if defined
+          (self.on_backswing or (lambda *args: None))(controller, self._hand)
 
   def _step_swing(self, controller):
     # Transition from TRANSITION to SWING if it makes sense
-    if(self._state == SwingState.TRANSITION):
-      if(controller.accelerometer.length() > Racket.SWING_SIZE):
-        self._state = SwingState.SWING
+    if(self._state == SwingState.BACKSWING):
+      if(controller.accelerometer.length() > Racket.SWING_PAUSE):
+        if(controller.trigger < Racket.TRIGGER_BACK):
+          self._state = SwingState.SWING
 
-        # Call our callback if defined
-        (self.on_swing or (lambda *args: None))(controller, self._hand)
+          # Call our callback if defined
+          (self.on_swing or (lambda *args: None))(controller, self._hand)
 
   def _step_idle(self, controller):
     # Transition from SWING to IDLE if it makes sense
@@ -81,7 +74,6 @@ class Racket(psmoveapi.PSMoveAPI):
   def _step_state(self, controller):
     # Step through the states
     self._step_backswing(controller)
-    self._step_transition(controller)
     self._step_swing(controller)
     self._step_idle(controller)
 

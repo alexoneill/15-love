@@ -11,8 +11,8 @@ from src import text_racket
 def main(typ = 'game'):
   if(typ == 'game'):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # client.connect(('***REMOVED***', 8081))
-    client.connect(('***REMOVED***', 8081))
+    # client.connect(('pbridge.adm.cs.cmu.edu', 8081))
+    client.connect(('128.2.208.126', 8081))
 
     # Get a text-based racket and constantly update it
     gracket = game_racket.GameRacket(client, 2)
