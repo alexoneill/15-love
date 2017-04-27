@@ -5,8 +5,14 @@ import eventlet.wsgi
 from flask import Flask
 
 ###############################################################################
-# Defien server and queues
+'''SocketIO based server for 15-Love
+
+Handles events from controller and sets up wrappers to communicate with the
+racket host computer. Events and cooresponding data structures defined in
+sio_spec.txt'''
 ###############################################################################
+
+# Define server and queues
 sio = socketio.Server()
 app = Flask(__name__)
 
@@ -42,7 +48,7 @@ def game_over(is_winner):
 
 
 ###############################################################################
-# Event Handlers (what the server is listening for)
+# Event Handlers
 ###############################################################################
 @sio.on('connect')
 def connect(sid, environ):
@@ -69,6 +75,9 @@ def disconnect(sid):
     print('disconnected', sid)
 
 
+###############################################################################
+# Run
+###############################################################################
 if __name__ == '__main__':
     # wrap Flask application with engineio's middleware
     app = socketio.Middleware(sio, app)
