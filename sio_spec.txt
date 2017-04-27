@@ -17,6 +17,8 @@ game_start: None
 game_over: dict
   - is_winner: bool
 
+game_restart: None
+
 Racket - Emit
 =============
 init_color_choice: dict
