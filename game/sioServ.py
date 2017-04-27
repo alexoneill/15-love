@@ -26,8 +26,8 @@ def connect(sid, environ):
 
 @sio.on('swing')
 def getSwing(sid, swingData):
-    print("got swing:", swingData)  # swingData is a list conatin
-    outqueue.put(swingData)  # puts the swingdata on the outqueue
+    print("got swing:", swingData)  # swingData is a list conating...
+    inqueue.put(('swing', swingData))  # puts the swingdata on the inqueue
 
     ''' rumble callback test
     rumbleData = {'player':     1,
@@ -37,7 +37,7 @@ def getSwing(sid, swingData):
 
 @sio.on('disconnect')
 def disconnect(sid):
-    print('disconnect ', sid)
+    print('disconnected', sid)
 
 
 if __name__ == '__main__':
@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
 ''' Does not work to get inqueue data
     while(1):
-        data = inqueue.get()
+        data = outqueue.get()
         print(data)
         if (data is not None):
             print('got data')
