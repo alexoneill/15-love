@@ -18,8 +18,7 @@ class Clock(object):
         while diff < sec_per_frame:
             diff = time.time() - self.last_tick
         if diff > 1.05 * sec_per_frame:
-            print("Warning: tick is not being called fast enough\n"
-                  "Target {}, Actual {}" % (sec_per_frame, diff))
+            print("Warning: tick is not being called fast enough\n")
         self.last_tick = time.time()
 
 # Abstract class for defining the display loop of a show

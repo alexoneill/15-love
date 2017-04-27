@@ -54,7 +54,7 @@ class Bridge(object):
                 timer.fade()
 
             # remove faded timers, decrease priority
-            timers = [ (t, 0.5 * p) for t, p in self.timers[k] if not t.is_faded() ]
+            timers = [ (t, 0.9 * p) for t, p in self.timers[k] if not t.is_faded() ]
             if timers:
                 self.timers[k] = timers
             else:

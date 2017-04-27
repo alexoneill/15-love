@@ -181,7 +181,7 @@ class Ball(Animation):
                 self.is_active = False
 
                 # player who got the point
-                awarded_player = 2 if self.x <= 0 else 1
+                awarded_player = 2 if self.x <= 50 else 1
 
                 # make the show perform the actions it does when a player misses
                 show.on_missed_ball(awarded_player)
@@ -189,7 +189,7 @@ class Ball(Animation):
     def hit(self):
         # change direction when hit
         self.velocity = -self.velocity
-        self.color = random.choice(Colors.ALL) # Set to a random color
+        #self.color = random.choice(Colors.ALL) # Set to a random color
 
 # Class that represents where the player's state, including swing location
 class Player(Animation):

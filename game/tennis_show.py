@@ -22,7 +22,7 @@ class TennisShow(Show):
 
     def init(self):
         # offset of start panel for player 1 and player 2
-        p1_seq = Bridge.SEQ_LO
+        p1_seq = Bridge.SEQ_LO + 12
         p2_seq = Bridge.SEQ_HI
 
         # ball comes in front of players
@@ -34,11 +34,11 @@ class TennisShow(Show):
         ball_color = Colors.LIME
 
         # how long to make the swing
-        max_swing = 35 # sequences
+        max_swing = 25 # sequences
 
-        p1 = Player(color=p1_color, origin=p1_seq, max_swing=max_swing, velocity=1)
-        p2 = Player(color=p2_color, origin=p2_seq, max_swing=max_swing, velocity=-1)
-        ball = Ball(color=ball_color, origin=p1_seq, max_seq=p2_seq, velocity=3)
+        p1 = Player(color=p1_color, origin=p1_seq, max_swing=max_swing, velocity=2)
+        p2 = Player(color=p2_color, origin=p2_seq, max_swing=max_swing, velocity=-2)
+        ball = Ball(color=ball_color, origin=p1_seq, max_seq=p2_seq, velocity=2)
 
         # player 1 serves first
         p1.serving = True
@@ -148,8 +148,8 @@ class TennisShow(Show):
             bseq = ball.get_seq()
 
             # only hit when ball color is same color as player color
-            if player.color != ball.color:
-                return
+            #if player.color != ball.color:
+                #return
 
             # hit ball if it has crossed where the player is swinging
             if player.velocity > 0 and ball.velocity < 0 and bseq <= pseq:
