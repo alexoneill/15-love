@@ -26,3 +26,5 @@ game_swing: dict
   - player_num: int
   - hand: int (0 -> left, 1 -> right)
   - strength: float[0, 1]
+
+game_reset: None
