@@ -12,6 +12,8 @@ game_hit_ball: dict
 
 game_is_server: None
 
+game_start: None
+
 game_over: dict
   - is_winner: bool
 
