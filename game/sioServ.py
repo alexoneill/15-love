@@ -4,6 +4,9 @@ import eventlet
 import eventlet.wsgi
 from flask import Flask
 
+###############################################################################
+# Defien server and queues
+###############################################################################
 sio = socketio.Server()
 app = Flask(__name__)
 
