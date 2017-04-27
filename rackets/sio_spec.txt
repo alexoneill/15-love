@@ -1,0 +1,26 @@
+Racket - Listen
+===============
+init_color_reject: None
+
+init_color_confirm: dict
+  - color: (float[0, 1] * float[0, 1] * float[0, 1])
+
+game_missed_ball: None
+
+game_hit_ball: dict
+  - strength: float[0, 1]
+
+game_is_server: None
+
+game_over: dict
+  - is_winner: bool
+
+Racket - Emit
+=============
+init_color_choice: dict
+  - color: (float[0, 1] * float[0, 1] * float[0, 1])
+
+game_swing: dict
+  - player_num: int
+  - hand: int (0 -> left, 1 -> right)
+  - strength: float[0, 1]
