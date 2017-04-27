@@ -7,7 +7,7 @@ from flask import Flask
 ###############################################################################
 '''SocketIO based server for 15-Love
 
-Handles events from controller and sets up wrappers to communicate with the
+Handles events from rackets and sets up wrappers to communicate with the
 racket host computer. Events and cooresponding data structures defined in
 sio_spec.txt'''
 ###############################################################################
