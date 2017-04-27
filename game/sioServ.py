@@ -15,7 +15,7 @@ outqueue = Queue.Queue()
 # Emit wrappers, to be called in the game to send events
 ###############################################################################
 def init_color_reject():
-    sio.emit('init_color_reject', None)
+    sio.emit('init_color_reject')
 
 
 def init_color_confrim(color):
@@ -23,7 +23,7 @@ def init_color_confrim(color):
 
 
 def game_missed_ball():
-    sio.emit('game_missed_ball', None)
+    sio.emit('game_missed_ball')
 
 
 def game_hit_ball(hitData):
@@ -31,7 +31,7 @@ def game_hit_ball(hitData):
 
 
 def game_is_server():
-    sio.emit('game_is_server', None)
+    sio.emit('game_is_server')
 
 
 def game_over(is_winner):
@@ -46,10 +46,19 @@ def connect(sid, environ):
     print("connected", sid)
 
 
-@sio.on('swing')
-def get_swing(sid, swingData):
-    print("got swing:", swingData)  # swingData is a list conating...
-    inqueue.put(('swing', swingData))  # puts the swingdata on the inqueue
+@sio.on('init_color_choice')
+def init_color_choice(sid, colorData):
+    inqueue.add(('init_color_choice', colorData))
+
+
+@sio.on('game_swing')
+def game_swing(sid, swingData):
+    inqueue.put(('swing', swingData))
+
+
+@sio.on('game_reset')
+def game_reset(sid):
+    inqueue.add(('game_reset', None))
 
 
 @sio.on('disconnect')
