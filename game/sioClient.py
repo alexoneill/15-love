@@ -6,25 +6,37 @@ def on_connect():
 
 
 def on_disconnect():
-    print('disconnect')
+    print('disconnected')
 
 
 def on_reconnect():
-    print('reconnect')
+    print('reconnected')
 
 
-def on_color_response(*args):
-    print('got color', args)
+def getRumble(data):
+    # Unpack args, rumble is a dict conatining player and rumbleVal.s
+    player = data['player']
+    rumbleVal = data['rumbleVal']
+    print('rumbling player %d' % player, rumbleVal)
+
+    # Pass rumble to racquet
+    # insert code here to pass rumble val along
 
 
-socketIO = SocketIO('localhost', 8000, LoggingNamespace)
+socketIO = SocketIO('localhost', 8000, LoggingNamespace)  # Sets up connection
+
+# Link events to handlers
 socketIO.on('connect', on_connect)
 socketIO.on('disconnect', on_disconnect)
 socketIO.on('reconnect', on_reconnect)
-socketIO.on('color', on_color_response)
+socketIO.on('rumble', getRumble)
 
-# Listen
-socketIO.emit('swing', 1)
+
+###############################################################################
+# Test, sends 2 swings with junk data and disconnects
+###############################################################################
+swingdata = [1, 2, 3]
+socketIO.emit('swing', swingdata)
 socketIO.wait(seconds=1)
 socketIO.emit('swing', 2)
-socketIO.wait()
+socketIO.disconnect()
