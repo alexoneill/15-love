@@ -6,6 +6,8 @@ init_color_confirm: None
 
 game_missed_ball: None
 
+game_won_rally: None
+
 game_hit_ball: dict
   - strength: float[0, 1]
 
