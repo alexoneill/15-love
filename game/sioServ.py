@@ -27,8 +27,8 @@ def init_color_reject():
     sio.emit('init_color_reject')
 
 
-def init_color_confrim(color):
-    sio.emit('init_color_confirm', color)
+def init_color_confrim():
+    sio.emit('init_color_confirm')
 
 
 def game_missed_ball():
@@ -39,12 +39,20 @@ def game_hit_ball(hitData):
     sio.emit('game_hit_ball', hitData)
 
 
+def game_start():
+    sio.emit('game_start')
+
+
 def game_is_server():
     sio.emit('game_is_server')
 
 
 def game_over(is_winner):
     sio.emit('game_over', is_winner)
+
+
+def game_restart():
+    sio.emit('game_restart')
 
 
 ###############################################################################
