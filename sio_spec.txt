@@ -2,8 +2,7 @@ Racket - Listen
 ===============
 init_color_reject: None
 
-init_color_confirm: dict
-  - color: (float[0, 1] * float[0, 1] * float[0, 1])
+init_color_confirm: None
 
 game_missed_ball: None
 
