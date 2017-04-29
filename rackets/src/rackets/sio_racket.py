@@ -96,13 +96,15 @@ class SIORacket(racket.Racket):
     self._sio.on('game_won_rally', self.on_sio_game_won_rally)
     self._sio.on('game_over', self.on_sio_game_over)
 
+    print 'socketio: init'
+
     # Other parameters
     self.state = GameState.COLOR_SELECTION
     self.state_data = None
     self.color_choice = None
     self.enable_swings = False
 
-    print 'socketio: init'
+    print 'racket: init'
 
   ################################ Helpers #####################################
 
@@ -181,6 +183,7 @@ class SIORacket(racket.Racket):
 
   def on_sio_init_color_confirm(self):
     # Callback for a color confirmation event
+    print 'socketio: init_color_confirm'
 
     # Ready for swings!
     self.enable_swings = True
@@ -197,6 +200,7 @@ class SIORacket(racket.Racket):
 
   def on_sio_init_color_reject(self):
     # Callback for a color rejection event
+    print 'socketio: init_color_reject'
 
     # Disable swings (not at the game yet)
     self.enable_swings = False
@@ -217,6 +221,7 @@ class SIORacket(racket.Racket):
 
   def on_sio_game_is_server(self):
     # Callback for when the player becomes the person serving the ball
+    print 'socketio: game_is_server'
 
     # Keep swings enabled
     self.enable_swings = True
@@ -233,6 +238,7 @@ class SIORacket(racket.Racket):
 
   def on_sio_game_missed_ball(self):
     # Callback for a missed ball event
+    print 'socketio: game_missed_ball'
 
     # Keep swings enabled
     self.enable_swings = True
@@ -253,6 +259,7 @@ class SIORacket(racket.Racket):
 
   def on_sio_game_hit_ball(self, data):
     # Callback for a hit ball event
+    print 'socketio: game_hit_ball'
 
     # Parse parameters
     strength = data['strength']
@@ -272,6 +279,7 @@ class SIORacket(racket.Racket):
 
   def on_sio_game_won_rally(self):
     # Callback for when a player wins the rally
+    print 'socketio: game_won_rally'
 
     # Keep swings enabled
     self.enable_swings = True
@@ -292,6 +300,7 @@ class SIORacket(racket.Racket):
 
   def on_sio_game_over(self, data):
     # Callback for when the game ends
+    print 'socketio: game_over'
 
     # Parse parameters
     is_winner = data['is_winner']
@@ -397,8 +406,6 @@ class SIORacket(racket.Racket):
     if(self.state == GameState.COLOR_SELECTION):
       choices = (psmoveapi.Button.SQUARE, psmoveapi.Button.TRIANGLE,
         psmoveapi.Button.CROSS, psmoveapi.Button.CIRCLE)
-
-      print 'psmove:', buttons, 'pressed'
 
       # Cycle through button options
       for button in choices:

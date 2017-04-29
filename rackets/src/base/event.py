@@ -41,9 +41,16 @@ class Event(object):
     # Start the event if not yet started
     if(not self._started):
       self.start()
+      print 'event:', self
 
     # Do the action if still defined
     if(not self.done()):
       self.action((time.time() - self._start_time) / self.duration, *args)
 
-
+  def __str__(self):
+    if(self.action):
+      return '%s{duration = %d, action = %s}' % (
+          self.__class__.__name__, self.duration, self.action.__name__)
+    else:
+      return '%s{duration = %d, action = None}' % (
+          self.__class__.__name__, self.duration)

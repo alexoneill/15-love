@@ -27,6 +27,8 @@ class ClearEvent(event.Event):
 
   def do(self, controller, color):
     # Reset various parts of the controller if requested
+    print 'event:', self
+
     if(self.clear_rumble):
       controller.rumble = 0
 
