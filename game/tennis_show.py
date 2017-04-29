@@ -76,6 +76,7 @@ class TennisShow(Show):
     *******************************************************"""
     def reset(self, data):
         print "Restarting game"
+        self.outqueue.put(("game_restart"))
         self.init() # just call the init function again
 
     """*******************************************************************************
@@ -135,7 +136,7 @@ class TennisShow(Show):
         if player.color != None and other_player.color != None:
             # start the game loop
             del self.actions["flash_players"]
-            self.outqueue.put(("game_start", None))
+            self.outqueue.put(("game_start"))
             print "Entering game loop"
             self.actions["game_loop"] = self.game_loop
 
