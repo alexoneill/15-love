@@ -28,19 +28,22 @@ class Racket(psmoveapi.PSMoveAPI):
   SWING_PAUSE = 1.5
   TRIGGER_BACK = 0.5
 
+  # Limits for swing strength
   SWING_MAX_STRENGTH = 10.0
   SWING_MIN_STRENGTH = SWING_PAUSE
 
   def __init__(self):
     super(Racket, self).__init__()
 
-    # Initialize internal state mahine
+    # Initialize internal state machine
     self._state = SwingState.IDLE
     self._hand = Handedness.RIGHT
     self._disable = False
     self._enable = False
 
   def _optional_callback(self, name, *args):
+    # Given the name of a function which may exist, call it if it does with the
+    # supplied arguments
     if(hasattr(self, name)):
       return getattr(self, name)(*args)
 
@@ -96,7 +99,7 @@ class Racket(psmoveapi.PSMoveAPI):
     self._step_idle(controller)
 
   def _get_button(self, controller):
-    # See which button was pressed
+    # See which buttons are pressed
     buttons = set([])
     for button in (psmoveapi.Button.TRIANGLE, psmoveapi.Button.CIRCLE,
         psmoveapi.Button.CROSS, psmoveapi.Button.SQUARE,
@@ -105,6 +108,7 @@ class Racket(psmoveapi.PSMoveAPI):
       if(controller.now_pressed(button)):
         buttons.add(button)
 
+    # Give the collection of buttons
     return (buttons if(buttons) else None)
 
   def on_connect(self, controller):
