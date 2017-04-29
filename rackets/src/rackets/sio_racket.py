@@ -54,6 +54,7 @@ class SIORacket(racket.Racket):
 
   # Times for animations
   COLOR_TRANS_TIME   = 0.2
+  COLOR_WAIT_TIME    = 0.1
   COLOR_CONFIRM_TIME = 0.5
   COLOR_REJECT_TIME  = 0.25
   SERVER_TIME        = 1.0
@@ -417,7 +418,17 @@ class SIORacket(racket.Racket):
     # Color confirmation logic
     if((self.color_choice is not None) and (psmoveapi.Button.MOVE in buttons)):
       self.sio_init_color_choice(self.color_choice)
+
+      # Signal a transition to the next state
       self.state = GameState.COLOR_WAIT
+      self.state_data = {
+          'events': [
+              (event.Event(SIORacket.COLOR_WAIT_TIME,
+                  self.generic_flash(rumble_scale = 0.75,
+                      color_scale = 0.75)), None),
+              (clear_event.ClearEvent(), None)
+            ]
+        }
 
   ######################### Housekeeping Events ################################
 
