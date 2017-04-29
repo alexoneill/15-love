@@ -4,21 +4,7 @@
 # Instead of lighting up a bridge, we light up the terminal
 
 from tennis_show import TennisShow
-from bridge import Bridge
-import sys
-
-# silent
-if "-s" in sys.argv:
-    class TerminalBridge(Bridge):
-        def init(self): pass
-        def paint(self): pass
-else:
-    from terminal_bridge import TerminalBridge
-
-# Only import actual bridge if we're running on the bridge
-if "-p" in sys.argv:
-    from pausch_bridge import PauschBridge
-
+import current_bridge
 from threading import Thread
 import Queue
 from colors import Colors
@@ -67,5 +53,4 @@ def main(bridge):
         thread_continuing = False
 
 if __name__ == "__main__":
-    bridge = PauschBridge if "-p" in sys.argv else TerminalBridge
-    main(bridge)
+    main(current_bridge.bridge)
