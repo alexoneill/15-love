@@ -25,11 +25,7 @@ class TennisShow(Show):
         p1_seq = Bridge.SEQ_LO + 12
         p2_seq = Bridge.SEQ_HI
 
-        # ball comes in front of players
-        player_priority = 3
-        ball_priority = 4
-
-        ball_color = Colors.LIME
+        ball_color = Colors.YELLOW
 
         # how long to make the swing
         max_swing = 28 # sequences
@@ -38,7 +34,7 @@ class TennisShow(Show):
         p2 = Player(color=None, origin=p2_seq, max_swing=max_swing, velocity=-2)
         ball = Ball(color=ball_color, origin=p1_seq, max_seq=p2_seq, velocity=2)
 
-        # player 1 serves first
+        # p1 serves first
         p1.serving = True
 
         # define what objects game should update every loop
@@ -68,20 +64,45 @@ class TennisShow(Show):
         for key in self.actions.keys():
             self.actions[key](event)
 
+    """*******************************************************
+    * Restart game completely, going back to color selection *
+    *******************************************************"""
+    def reset(self, data):
+        self.init() # just call the init function again
+
     """*******************************************************************************
     *  The start of the show performs a brief light show. When both                  *
     *  players have chosen their colors, the game loop starts with player 1 serving. *
     *******************************************************************************"""
     def start_show(self, event):
-        # TODO: Indicate where players should stand, have players select color?
-        print "Showing start show"
-        if event:
-            name, data = event
-            # currently, there's nothing we do in the start show, but this could change.
-            {
-              "game_reset": self.reset,
-              "init_color_choice": self.choose_color
-            }.get(name, unrecognized_event(name))(data)
+        p1 = self.p1
+        p2 = self.p2
+        p1_animation = StartAnimation(start=p1.origin, end=p1.origin + p1.max_swing)
+        p2_animation = StartAnimation(start=p2.origin - p2.max_swing, end=p2.origin)
+        def flash_players(event):
+            if event:
+                name, data = event
+                {
+                  "game_reset": self.reset,
+                  "init_color_choice": self.choose_color
+                }.get(name, unrecognized_event(name))(data)
+
+            # update animations
+            p1_animation.update(p1.color)
+            p2_animation.update(p2.color)
+
+            # set bridge
+            p1_animation.render(self.bridge)
+            p2_animation.render(self.bridge)
+
+
+        # delegate to flash_players
+        del self.actions["start_show"]
+        self.actions["flash_players"] = flash_players
+
+        # make sure we capture the current event
+        flash_players(event)
+
 
     def choose_color(self, data):
         color = data["color"]
@@ -104,7 +125,7 @@ class TennisShow(Show):
         # if both players have selected their color
         if player.color != None and other_player.color != None:
             # start the game loop
-            del self.actions["start_show"]
+            del self.actions["flash_players"]
             self.outqueue.put(("game_start", None))
             self.actions["game_loop"] = self.game_loop
 
@@ -151,18 +172,7 @@ class TennisShow(Show):
             print "Player 2 swung"
             player_swing(self.p2, opponent=self.p1)
 
-    # button press event received
-    def press(self, data):
-        player = self.players[data["player"]]
-        if data["shape"] == "square":
-            player.color = Colors.PURPLE
-        elif data["shape"] == "circle":
-            player.color = Colors.CORAL
-        elif data["shape"] == "triangle":
-            player.color = Colors.LIME
-        elif data["shape"] == "x":
-            player.color = Colors.SKY_BLUE
-
+    # check to see if ball crossed player
     def check_for_hit(self, player):
         ball = self.ball
         if player.is_active and ball.is_active:

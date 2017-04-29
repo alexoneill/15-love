@@ -4,7 +4,6 @@
 
 from bridge import Bridge
 from colors import Colors
-import random
 
 PLAYER_PRIORITY = 3
 BALL_PRIORITY = 4
@@ -64,7 +63,7 @@ class ScoreBars(Animation):
          or (self.velocity > 0 and self.x >= self.end_x)):
             self.x = self.end_x
             self.velocity = 0
-            self.frames_till_end = 40
+            self.frames_till_end = 80 # frames to hang suspended
             print "Score reached destination at %d" % self.x
 
         # run until dead
@@ -76,12 +75,36 @@ class ScoreBars(Animation):
 
             self.frames_till_end -= 1
 
+# start game flashing where to stand
+class StartAnimation(object):
+    def __init__(self, start_seq, end_seq):
+        self.fade_level = 0
+        self.start_seq = start_seq
+        self.end_seq = end_seq
+        self.fading_in = True
+        self.color = Colors.WHITE
+
+    def update(self, color):
+        # update color if set
+        if color: self.color = color
+
+        if fading_in: fade_level += 1
+        else: fade_level -= 1
+
+        # switch direction of fade
+        if fade_level == 100: fading_in = False
+        if fade_level == 0: fading_in = True
+
+    def render(self, bridge):
+        for i in xrange(self.start_seq, self.end_seq):
+            bridge.set_fade(i, self.color, 0, 1) # 0 frames, 1 priority
+
 # Class for the pulse animation after someone scores
 # Also displays score for each player
 class ScoreAnimation(object):
 
     # distance between consecutive score panels
-    SEPARATION = 2 # sequences
+    SEPARATION = 3 # sequences
     VELOCITY = 4 # sequences per frame for score bars
     FADE_FRAMES = 10 # how long it takes to fade
 
@@ -92,7 +115,7 @@ class ScoreAnimation(object):
 
         # start animation immediately
         self.state = "pulse" # pulse is where we make the whole bridge the same color
-        self.pulse_frames = 40
+        self.pulse_frames = 60
         self.is_active = True
 
     def update(self):
@@ -189,7 +212,6 @@ class Ball(Animation):
     def hit(self):
         # change direction when hit
         self.velocity = -self.velocity
-        #self.color = random.choice(Colors.ALL) # Set to a random color
 
 # Class that represents where the player's state, including swing location
 class Player(Animation):
