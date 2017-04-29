@@ -5,7 +5,7 @@ import os
 import socket
 import sys
 
-from src import sio_racket
+from src.rackets import sio_racket
 
 # Main method when running the racket driver code
 def main(player = '1'):

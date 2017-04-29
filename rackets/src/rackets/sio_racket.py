@@ -8,9 +8,9 @@ import socketIO_client as sio
 
 from libs import psmoveapi
 
-from base import event
-from base import racket
-from events import clear_event
+from src.base import event
+from src.base import racket
+from src.events import clear_event
 
 
 class GameState(object):
@@ -53,7 +53,7 @@ class SIORacket(racket.Racket):
   COLOR_WIN   = COLOR_GOOD
 
   # Times for animations
-  COLOR_TRANS_TIME   = 0.15
+  COLOR_TRANS_TIME   = 0.2
   COLOR_CONFIRM_TIME = 0.5
   COLOR_REJECT_TIME  = 0.25
   SERVER_TIME        = 1.0
@@ -245,9 +245,9 @@ class SIORacket(racket.Racket):
                 self.generic_color_trans(None, SIORacket.COLOR_LOSE)), None),
             (event.Event(SIORacket.LOST_RALLY_TIME,
                 self.generic_flash(freq = 2)), SIORacket.COLOR_LOSE),
+            (clear_event.ClearEvent(clear_color = True), SIORacket.COLOR_LOSE),
             (event.Event(SIORacket.COLOR_TRANS_TIME,
-                self.generic_color_trans(SIORacket.COLOR_LOSE, None)), None),
-            (clear_event.ClearEvent(), None)
+                self.generic_color_trans(SIORacket.COLOR_LOSE, None)), None)
           ]
       }
 
@@ -284,9 +284,9 @@ class SIORacket(racket.Racket):
                 self.generic_color_trans(None, SIORacket.COLOR_WIN)), None),
             (event.Event(SIORacket.WON_RALLY_TIME,
                 self.generic_flash(freq = 2)), SIORacket.COLOR_WIN),
+            (clear_event.ClearEvent(clear_color = True), SIORacket.COLOR_WIN),
             (event.Event(SIORacket.COLOR_TRANS_TIME,
                 self.generic_color_trans(SIORacket.COLOR_WIN, None)), None),
-            (clear_event.ClearEvent(), None)
           ]
       }
 
@@ -314,9 +314,9 @@ class SIORacket(racket.Racket):
                 self.generic_color_trans(None, color)), None),
             (event.Event(SIORacket.OVER_TIME,
                 self.generic_flash(freq = 5)), color),
+            (clear_event.ClearEvent(clear_color = True), color),
             (event.Event(SIORacket.COLOR_TRANS_TIME,
-                self.generic_color_trans(color, SIORacket.COLOR_CLEAR)), None),
-            (clear_event.ClearEvent(), None)
+                self.generic_color_trans(color, SIORacket.COLOR_CLEAR)), None)
           ]
       }
 
@@ -331,7 +331,7 @@ class SIORacket(racket.Racket):
   def sio_game_swing(self, hand, strength):
     # Method to communicate the swing event
 
-    self._sio.emit('init_color_choice', {
+    self._sio.emit('game_swing', {
         'player_num': self.player_num,
         'hand': (0 if(hand == racket.Handedness.LEFT) else 1),
         'strength': strength

@@ -1,7 +1,9 @@
 # sio_racket.py
 # aoneill - 04/28/17
 
-from base import event
+from libs import psmoveapi
+
+from src.base import event
 
 class ClearEvent(event.Event):
   '''
