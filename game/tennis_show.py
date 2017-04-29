@@ -29,15 +29,13 @@ class TennisShow(Show):
         player_priority = 3
         ball_priority = 4
 
-        p1_color = Colors.CORAL
-        p2_color = Colors.SKY_BLUE
         ball_color = Colors.LIME
 
         # how long to make the swing
         max_swing = 28 # sequences
 
-        p1 = Player(color=p1_color, origin=p1_seq, max_swing=max_swing, velocity=2)
-        p2 = Player(color=p2_color, origin=p2_seq, max_swing=max_swing, velocity=-2)
+        p1 = Player(color=None, origin=p1_seq, max_swing=max_swing, velocity=2)
+        p2 = Player(color=None, origin=p2_seq, max_swing=max_swing, velocity=-2)
         ball = Ball(color=ball_color, origin=p1_seq, max_seq=p2_seq, velocity=2)
 
         # player 1 serves first
@@ -70,10 +68,10 @@ class TennisShow(Show):
         for key in self.actions.keys():
             self.actions[key](event)
 
-    """**************************************************************
-    *  The start of the show performs a brief light show. When the  *
-    *  light show ends, the game loop starts with player 1 serving. *
-    **************************************************************"""
+    """*******************************************************************************
+    *  The start of the show performs a brief light show. When both                  *
+    *  players have chosen their colors, the game loop starts with player 1 serving. *
+    *******************************************************************************"""
     def start_show(self, event):
         # TODO: Indicate where players should stand, have players select color?
         print "Showing start show"
@@ -85,9 +83,30 @@ class TennisShow(Show):
               "init_color_choice": self.choose_color
             }.get(name, unrecognized_event(name))(data)
 
-        # Don't have a start show yet, so just start the game loop
-        del self.actions["start_show"]
-        self.actions["game_loop"] = self.game_loop
+    def choose_color(self, data):
+        color = data["color"]
+        player_num = data["player_num"]
+        other_player_num = switch(player_num)
+
+        # get players from dictionary
+        player = self.players[player_num]
+        other_player = self.players[other_player_num]
+
+        if other_player.color == color:
+            # inform them their color has already been chosen
+            self.outqueue.put(("init_color_reject", { "player_num": player_num }))
+        else:
+            # Accept player color
+            self.outqueue.put(("init_color_confirm", { "player_num": player_num }))
+            # set color
+            player.color = color
+
+        # if both players have selected their color
+        if player.color != None and other_player.color != None:
+            # start the game loop
+            del self.actions["start_show"]
+            self.outqueue.put(("game_start", None))
+            self.actions["game_loop"] = self.game_loop
 
     """****************************************************************
     *  In the game loop, we render the balls and player swings, check *
@@ -150,16 +169,14 @@ class TennisShow(Show):
             pseq = player.get_seq()
             bseq = ball.get_seq()
 
-            # only hit when ball color is same color as player color
-            #if player.color != ball.color:
-                #return
-
             # hit ball if it has crossed where the player is swinging
             if player.velocity > 0 and ball.velocity < 0 and bseq <= pseq:
                 print "Player 1 hit the ball"
+                self.outqueue.put(("game_hit_ball", { "player_num": 1 }))
                 ball.hit()
             elif player.velocity < 0 and ball.velocity > 0 and bseq >= pseq:
                 print "Player 2 hit the ball"
+                self.outqueue.put(("game_hit_ball", { "player_num": 2 }))
                 ball.hit()
 
     # show several animations at once
@@ -178,6 +195,8 @@ class TennisShow(Show):
             del self.actions["animate"]
             on_complete()
 
+    def switch(player_num):
+        return 1 if player_num == 2 else 2
 
     # Award points to a player
     def on_missed_ball(self, awarded_player):
@@ -185,6 +204,11 @@ class TennisShow(Show):
         player.score += 1
 
         print "Player %d now has score %d" % (awarded_player, player.score)
+
+        # send events for winning rally
+        other_player = switch(awarded_player)
+        self.outqueue.put(("game_won_rally", { "player_num": awarded_player }))
+        self.outqueue.put(("game_missed_ball", { "player_num": other_player }))
 
         # stop players from swinging
         self.p1.is_active = False
@@ -201,6 +225,9 @@ class TennisShow(Show):
                 self.actions["firework_show"] = self.firework_show
             else:
                 print "Resuming game loop"
+                # inform player they're serving
+                serving_player = 1 if self.players[1].serving else 2
+                self.outqueue.put(("game_is_server", { "player_num": serving_player }))
                 self.actions["game_loop"] = self.game_loop
 
         # Engulf entire bridge in red after a missed point
@@ -211,6 +238,6 @@ class TennisShow(Show):
     def firework_show(self, _):
         print "Showing fireworks"
         winning_player = 1 if self.players[1].score == 4 else 2 # decide which player won
-        self.outqueue.put (("game_over", { "player_num": winning_player }))
+        self.outqueue.put(("game_over", { "player_num": winning_player }))
         # TODO: Make a fun firework show at the end. Maybe design in Lumiverse??
         self.running = False # just end the show for now
