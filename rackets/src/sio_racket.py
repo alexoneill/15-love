@@ -63,12 +63,12 @@ class ClearEvent(Event):
 
 
 class GameState(object):
-  PRE_GAME = 0
-  COLOR_SELECTION = 1
-  COLOR_WAIT = 2
-  START_WAIT = 3
-  SERVER = 4
-  GAMEPLAY = 5
+  COLOR_SELECTION = 0
+  COLOR_WAIT = 1
+  START_WAIT = 2
+  SERVER = 3
+  GAMEPLAY = 4
+  HIT_BALL = 5
   WON_RALLY = 6
   LOST_RALLY = 7
   END_GAME_WIN = 8
@@ -96,15 +96,14 @@ class SIORacket(racket.Racket):
   COLOR_LOSE  = COLOR_BAD
   COLOR_WIN   = COLOR_GOOD
 
-  COLOR_TRANS_TIME   = 0.25
+  COLOR_TRANS_TIME   = 0.15
   COLOR_CONFIRM_TIME = 0.5
-  COLOR_REJECT_TIME  = 0.5
+  COLOR_REJECT_TIME  = 0.25
   SERVER_TIME        = 1.0
-  LOST_TIME          = 0.5
   HIT_TIME           = 0.5
-  WON_RALLY_TIME     = 2.0
-  OVER_TIME          = 3.0
-  RESET_TIME         = 1.0
+  WON_RALLY_TIME     = 1.0
+  LOST_RALLY_TIME    = 1.0
+  OVER_TIME          = 5.0
 
   def __init__(self, sio_host, sio_port, player_num):
     super(SIORacket, self).__init__()
@@ -138,7 +137,7 @@ class SIORacket(racket.Racket):
     self._sio.on('game_over', self.on_sio_game_over)
 
     # Other parameters
-    self.state = GameState.PRE_GAME
+    self.state = GameState.COLOR_SELECTION
     self.state_data = None
     self.color_choice = None
     self.enable_swings = False
@@ -200,7 +199,7 @@ class SIORacket(racket.Racket):
   ######################### socketio Listeners #################################
 
   def on_sio_init_color_confirm(self):
-    self.enable_swings = True
+    self.enable_swings = False
 
     self.state = GameState.START_WAIT
     self.state_data = {
@@ -249,7 +248,7 @@ class SIORacket(racket.Racket):
         'events': [
             (Event(SIORacket.COLOR_TRANS_TIME,
                 self.generic_color_trans(None, SIORacket.COLOR_LOSE)), None),
-            (Event(SIORacket.LOST_TIME,
+            (Event(SIORacket.LOST_RALLY_TIME,
                 self.generic_flash(freq = 2)), SIORacket.COLOR_LOSE),
             (Event(SIORacket.COLOR_TRANS_TIME,
                 self.generic_color_trans(SIORacket.COLOR_LOSE, None)), None),
@@ -267,7 +266,7 @@ class SIORacket(racket.Racket):
     self.state_data = {
         'events': [
             (Event(SIORacket.HIT_TIME,
-                self.generic_flash(scale = strength)), None),
+                self.generic_flash(color_scale = strength)), None),
             (ClearEvent(), None)
           ]
       }
@@ -298,15 +297,15 @@ class SIORacket(racket.Racket):
       self.state = GameState.END_GAME_WIN
     else:
       color = SIORacket.COLOR_LOSE
-      self.state = GameState.END_GAME_LOSE
+      self.state = GameState.END_GAME_LOST
 
     self.state_data = {
         'events': [
-            (Event(SIORacket.OVER_TIME, self.generic_flash(freq = 3)), color),
             (Event(SIORacket.COLOR_TRANS_TIME,
-                self.generic_color_trans(None, SIORacket.COLOR_CLEAR)), None),
-            (Event(SIORacket.RESET_TIME, self.generic_flash()),
-                SIORacket.COLOR_CLEAR),
+                self.generic_color_trans(None, color)), None),
+            (Event(SIORacket.OVER_TIME, self.generic_flash(freq = 5)), color),
+            (Event(SIORacket.COLOR_TRANS_TIME,
+                self.generic_color_trans(color, SIORacket.COLOR_CLEAR)), None),
             (ClearEvent(), None)
           ]
       }
@@ -323,7 +322,7 @@ class SIORacket(racket.Racket):
     self._sio.emit('init_color_choice', {
         'player_num': self.player_num,
         'hand': (0 if(hand == racket.Handedness.LEFT) else 1),
-        'strength': stength
+        'strength': strength
       })
 
   ############################ Racket Events ###################################
@@ -349,12 +348,12 @@ class SIORacket(racket.Racket):
 
   def print_state(self):
     strs = {
-        0: 'PRE_GAME',
-        1: 'COLOR_SELECTION',
-        2: 'COLOR_WAIT',
-        3: 'START_WAIT',
-        4: 'SERVER',
-        5: 'GAMEPLAY',
+        0: 'COLOR_SELECTION',
+        1: 'COLOR_WAIT',
+        2: 'START_WAIT',
+        3: 'SERVER',
+        4: 'GAMEPLAY',
+        5: 'HIT_BALL',
         6: 'WON_RALLY',
         7: 'LOST_RALLY',
         8: 'END_GAME_WIN',
@@ -366,14 +365,9 @@ class SIORacket(racket.Racket):
   def on_button(self, controller, buttons):
     print 'psmove:', buttons, 'pressed'
 
+    # Temporary to cycle through animations
     if(psmoveapi.Button.PS in buttons):
-      if(self.state == GameState.PRE_GAME):
-        self.state = GameState.COLOR_SELECTION
-        self.print_state()
-
-      # elif(self.state == GameState.COLOR_SELECTION):
-
-      elif(self.state == GameState.COLOR_WAIT):
+      if(self.state == GameState.COLOR_WAIT):
         if(bool(random.randint(0, 1))):
           print 'self.on_sio_init_color_reject()'
           self.on_sio_init_color_reject()
@@ -388,23 +382,27 @@ class SIORacket(racket.Racket):
       # elif(self.state == GameState.SERVER):
 
       elif(self.state == GameState.GAMEPLAY):
+        end_rally = False
+
         if(bool(random.randint(0, 3))):
           print 'self.on_sio_game_hit_ball()'
-          self.on_sio_game_hit_ball()
-          if(bool(random.randint(0, 1))):
+          self.on_sio_game_hit_ball({'strength': 0.75})
+          if(not bool(random.randint(0, 5))):
             print 'self.on_sio_game_won_rally()'
             self.on_sio_game_won_rally()
+            end_rally = True
         else:
           print 'self.on_sio_game_missed_ball()'
           self.on_sio_game_missed_ball()
+          end_rally = True
 
-        if(not bool(random.randint(0, 5))):
+        if(end_rally and not bool(random.randint(0, 5))):
           if(bool(random.randint(0, 1))):
             print 'self.on_sio_game_over()'
-            self.on_sio_game_over()
+            self.on_sio_game_over({'is_winner': False})
           else:
             print 'self.on_sio_game_over()'
-            self.on_sio_game_over()
+            self.on_sio_game_over({'is_winner': True})
 
       return
 
@@ -438,15 +436,15 @@ class SIORacket(racket.Racket):
     enable_swings = False
 
     # Here is where most of the day-to-day logic takes effect
-    if(self.state == GameState.PRE_GAME
-        or self.state == GameState.COLOR_SELECTION
+    if(self.state == GameState.COLOR_SELECTION
         or self.state == GameState.COLOR_WAIT
         or self.state == GameState.START_WAIT):
       enable_swings = self.enable_swings
 
     else:
       if(self.state == GameState.SERVER
-          or self.state == GameState.GAMEPLAY):
+          or self.state == GameState.GAMEPLAY
+          or self.state == GameState.HIT_BALL):
         next_state = GameState.GAMEPLAY
         enable_swings = True
 
@@ -454,9 +452,9 @@ class SIORacket(racket.Racket):
           or self.state == GameState.LOST_RALLY):
         next_state = GameState.GAMEPLAY
 
-      # elif(self.state == GameState.END_GAME_WIN
-      #     or self.state == GameState.END_GAME_LOST):
-      #   pass
+      elif(self.state == GameState.END_GAME_WIN
+          or self.state == GameState.END_GAME_LOST):
+        next_state = GameState.COLOR_SELECTION
 
     if(self.state_data is not None):
       if('events' in self.state_data):

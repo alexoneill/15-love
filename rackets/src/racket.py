@@ -28,6 +28,9 @@ class Racket(psmoveapi.PSMoveAPI):
   SWING_PAUSE = 1.5
   TRIGGER_BACK = 0.5
 
+  SWING_MAX_STRENGTH = 10.0
+  SWING_MIN_STRENGTH = SWING_PAUSE
+
   def __init__(self):
     super(Racket, self).__init__()
 
@@ -67,9 +70,13 @@ class Racket(psmoveapi.PSMoveAPI):
         if(controller.trigger < Racket.TRIGGER_BACK):
           self._state = SwingState.SWING
 
+          # Calculate strength
+          strength = min(Racket.SWING_MAX_STRENGTH,
+              max(Racket.SWING_MIN_STRENGTH, controller.accelerometer.length()))
+          strength = ((strength - Racket.SWING_MIN_STRENGTH) /
+              (Racket.SWING_MAX_STRENGTH - Racket.SWING_MIN_STRENGTH))
+
           # Call our callback if defined
-          strength = controller.accelerometer.length() - Racket.SWING_PAUSE
-          strength = min(1.0, max(0.0, strength))
           (self.on_swing or (lambda *args: None))(
               controller, self._hand, strength)
 
