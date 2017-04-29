@@ -68,6 +68,7 @@ class TennisShow(Show):
     * Restart game completely, going back to color selection *
     *******************************************************"""
     def reset(self, data):
+        print "Restarting game"
         self.init() # just call the init function again
 
     """*******************************************************************************
@@ -107,16 +108,18 @@ class TennisShow(Show):
     def choose_color(self, data):
         color = data["color"]
         player_num = data["player_num"]
-        other_player_num = switch(player_num)
+        other_player_num = TennisShow.switch(player_num)
 
         # get players from dictionary
         player = self.players[player_num]
         other_player = self.players[other_player_num]
 
         if other_player.color == color:
+            print "Player %d rejected for %s" % (player_num, color)
             # inform them their color has already been chosen
             self.outqueue.put(("init_color_reject", { "player_num": player_num }))
         else:
+            print "Player %d chose %s" % (player_num, color)
             # Accept player color
             self.outqueue.put(("init_color_confirm", { "player_num": player_num }))
             # set color
@@ -127,6 +130,7 @@ class TennisShow(Show):
             # start the game loop
             del self.actions["flash_players"]
             self.outqueue.put(("game_start", None))
+            print "Entering game loop"
             self.actions["game_loop"] = self.game_loop
 
     """****************************************************************
@@ -205,6 +209,7 @@ class TennisShow(Show):
             del self.actions["animate"]
             on_complete()
 
+    @staticmethod
     def switch(player_num):
         return 1 if player_num == 2 else 2
 
@@ -216,7 +221,7 @@ class TennisShow(Show):
         print "Player %d now has score %d" % (awarded_player, player.score)
 
         # send events for winning rally
-        other_player = switch(awarded_player)
+        other_player = TennisShow.switch(awarded_player)
         self.outqueue.put(("game_won_rally", { "player_num": awarded_player }))
         self.outqueue.put(("game_missed_ball", { "player_num": other_player }))
 

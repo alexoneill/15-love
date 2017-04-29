@@ -21,6 +21,7 @@ if "-p" in sys.argv:
 
 from threading import Thread
 import Queue
+from colors import Colors
 
 thread_continuing = True
 
@@ -40,15 +41,15 @@ def main(bridge):
                 x = int(inp[0])
                 if len(inp) > 1:
                     if inp[1] == "s":
-                        inqueue.put(("press", { "player": x, "shape": "square" }))
+                        inqueue.put(("init_color_choice", { "player_num": x, "color": Colors.RED }))
                     elif inp[1] == "t":
-                        inqueue.put(("press", { "player": x, "shape": "triangle" }))
+                        inqueue.put(("init_color_choice", { "player_num": x, "color": Colors.GREEN }))
                     elif inp[1] == "c":
-                        inqueue.put(("press", { "player": x, "shape": "circle" }))
+                        inqueue.put(("init_color_choice", { "player_num": x, "color": Colors.PURPLE }))
                     elif inp[1] == "x":
-                        inqueue.put(("press", { "player": x, "shape": "x" }))
+                        inqueue.put(("init_color_choice", { "player_num": x, "color": Colors.SKY_BLUE }))
                 else:
-                    inqueue.put(("swing", { "player": x }))
+                    inqueue.put(("game_swing", { "player_num": x }))
             except:
                 pass
 
