@@ -148,13 +148,19 @@ class SIORacket(racket.Racket):
   ################################ Helpers #####################################
 
   def generic_flash(self, freq = 1, rumble = True, color = True,
-      invert_color = False, invert_rumble = False, scale = 1.0):
+      invert_color = False, invert_rumble = False, scale = 1.0,
+      color_scale = 1.0, rumble_scale = 1.0, color_min = 0.0,
+      rumble_min = 0.0):
     def flash(time, controller, color_rgb):
       power = (1 - math.cos(time * (2 * math.pi) * freq))/2
       power = min(1.0, max(0.0, power * scale))
 
-      color_power = power if(invert_color) else (1 - power)
-      rumble_power = (1 - power) if(invert_rumble) else power
+      color_power = min(1.0, max(0.0, power * color_scale))
+      color_power = color_power if(invert_color) else (1 - color_power)
+
+      rumble_power = min(1.0, max(0.0, power * rumble_scale))
+      rumble_power = (1 - rumble_power) if(invert_rumble) else rumble_power
+
       color_flash = tuple(map(lambda x: x * color_power, list(color_rgb)))
 
       if(color):
@@ -200,7 +206,7 @@ class SIORacket(racket.Racket):
     self.state_data = {
         'events': [
             (Event(SIORacket.COLOR_CONFIRM_TIME,
-                self.generic_flash(freq = 3, color = False)), None),
+                self.generic_flash(freq = 3, color_scale = 0.75)), None),
             (ClearEvent(), None)
           ]
       }
