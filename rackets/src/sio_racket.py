@@ -40,15 +40,24 @@ class SIORacket(racket.Racket):
   '''
 
   COLORS = {
-      psmoveapi.Button.SQUARE:   (213.0 / 255.0, 145.0 / 255.0, 189.0 / 255.0),
-      psmoveapi.Button.TRIANGLE: ( 32.0 / 255.0, 178.0 / 255.0, 146.0 / 255.0),
-      psmoveapi.Button.CROSS:    (161.0 / 255.0, 169.0 / 255.0, 213.0 / 255.0),
-      psmoveapi.Button.CIRCLE:   (232.0 / 255.0,  79.0 / 255.0,  19.0 / 255.0)
+      psmoveapi.Button.SQUARE:   (255.0 / 255.0, 105.0 / 255.0, 180.0 / 255.0),
+      psmoveapi.Button.TRIANGLE: ( 64.0 / 255.0, 255.0 / 255.0, 64.0 / 255.0),
+      psmoveapi.Button.CROSS:    (24.0 / 255.0, 135.0 / 255.0, 189.0 / 255.0),
+      psmoveapi.Button.CIRCLE:   (255.0 / 255.0,  168.0 / 255.0,  24.0 / 255.0)
     }
 
   COLOR_LOSE  = (1.0, 0, 0)
   COLOR_WIN   = (0, 1.0, 0)
   COLOR_CLEAR = (1.0, 1.0, 1.0)
+
+  COLOR_CONFIRM_TIME = 1
+  COLOR_REJECT_TIME = 1
+  SERVER_TIME = 1
+  LOST_TIME = 0.5
+  HIT_TIME = 0.5
+  WON_RALLY_TIME = 2
+  OVER_TIME = 3
+  RESET_TIME = 1
 
   def __init__(self, sio_host, sio_port, player_num):
     super(SIORacket, self).__init__()
@@ -60,7 +69,7 @@ class SIORacket(racket.Racket):
 
     # socketio config
     # self._sio = sio.socketio(self.sio_host, self.sio_port)
-    self._sio = object()
+    self._sio = type('', (), {})
     def print2(*args):
       print args
 
@@ -78,29 +87,31 @@ class SIORacket(racket.Racket):
     self._sio.on('game_is_server', self.on_sio_game_is_server)
     self._sio.on('game_missed_ball', self.on_sio_game_missed_ball)
     self._sio.on('game_hit_ball', self.on_sio_game_hit_ball)
+    self._sio.on('game_won_rally', self.on_sio_game_won_rally)
     self._sio.on('game_over', self.on_sio_game_over)
 
     # Other parameters
     self.state = GameState.PRE_GAME
     self.state_data = None
     self.color_choice = None
+    self.enable_swings = False
 
     print 'socketio: init'
 
   ################################ Helpers #####################################
 
-  def generic_flash(self, freq = 1, rumble = True, invert_color = False,
-      invert_rumble = False, scale = 1.0):
-    def flash(time, controller, color):
+  def generic_flash(self, freq = 1, rumble = True, color = True,
+      invert_color = False, invert_rumble = False, scale = 1.0):
+    def flash(time, controller, color_rgb):
       power = (1 - math.cos(time * (2 * math.pi) * freq))/2
       power = min(1.0, max(0.0, power * scale))
 
       color_power = power if(invert_color) else (1 - power)
       rumble_power = (1 - power) if(invert_rumble) else power
+      color_flash = tuple(map(lambda x: x * color_power, list(color_rgb)))
 
-      color_flash = tuple(map(lambda x: x * color_power, list(color)))
-      controller.color = psmoveapi.RGB(*color_flash)
-
+      if(color):
+        controller.color = psmoveapi.RGB(*color_flash)
       if(rumble):
         controller.rumble = rumble_power
 
@@ -117,20 +128,31 @@ class SIORacket(racket.Racket):
   ######################### socketio Listeners #################################
 
   def on_sio_init_color_reject(self):
-    self.state = GameState.COLOR_SELECTION
-    self.state_data = None
+    self.enable_swings = False
 
-  def on_sio_init_color_confirm(self):
-    self.state = GameState.START_WAIT
+    self.state = GameState.COLOR_SELECTION
     self.state_data = {
         'events': [
             (Event(SIORacket.COLOR_CONFIRM_TIME,
-                self.generic_flash(freq = 3, rumble = False)), None)
+                self.generic_flash(color = False)), None)
+          ]
+      }
+
+  def on_sio_init_color_confirm(self):
+    self.enable_swings = True
+
+    self.state = GameState.START_WAIT
+    self.state_data = {
+        'events': [
+            (Event(SIORacket.COLOR_REJECT_TIME,
+                self.generic_flash(freq = 3)), None)
           ]
       }
 
   def on_sio_game_is_server(self):
-    self.state = GameState.START_WAIT
+    self.enable_swings = True
+
+    self.state = GameState.SERVER
     self.state_data = {
         'events': [
             (Event(SIORacket.SERVER_TIME, self.generic_flash(freq = 2)), None)
@@ -138,6 +160,8 @@ class SIORacket(racket.Racket):
       }
 
   def on_sio_game_missed_ball(self):
+    self.enable_swings = True
+
     self.state = GameState.LOST_RALLY
     self.state_data = {
         'events': [
@@ -149,6 +173,8 @@ class SIORacket(racket.Racket):
   def on_sio_game_hit_ball(self, data):
     strength = data['strength']
 
+    self.enable_swings = True
+
     self.state = GameState.HIT_BALL
     self.state_data = {
         'events': [
@@ -157,8 +183,19 @@ class SIORacket(racket.Racket):
           ]
       }
 
+  def on_sio_game_won_rally(self):
+    self.state = GameState.WON_RALLY
+    self.state_data = {
+        'events': [
+            (Event(SIORacket.WON_RALLY_TIME,
+                self.generic_flash(freq = 2)), SIORally.COLOR_WIN)
+          ]
+      }
+
   def on_sio_game_over(self, data):
     is_winner = data['is_winner']
+
+    self.enable_swings = True
 
     color = SIORacket.COLOR_WIN
     if(is_winner):
@@ -169,8 +206,8 @@ class SIORacket(racket.Racket):
 
     self.state_data = {
         'events': [
-            (Event(SIORacket.HIT_TIME, self.generic_flash(freq = 3)), color),
-            (Event(SIORacket.HIT_TIME, self.generic_flash()),
+            (Event(SIORacket.OVER_TIME, self.generic_flash(freq = 3)), color),
+            (Event(SIORacket.RESET_TIME, self.generic_flash()),
                 SIORacket.COLOR_CLEAR)
           ]
       }
@@ -213,6 +250,23 @@ class SIORacket(racket.Racket):
   def on_button(self, controller, buttons):
     print 'psmove:', buttons, 'pressed'
 
+    if(psmoveapi.Button.PS in buttons):
+      self.state = (self.state + 1) % (GameState.END_GAME_LOST + 1)
+      strs = {
+          0: 'PRE_GAME',
+          1: 'COLOR_SELECTION',
+          2: 'COLOR_WAIT',
+          3: 'START_WAIT',
+          4: 'SERVER',
+          5: 'GAMEPLAY',
+          6: 'WON_RALLY',
+          7: 'LOST_RALLY',
+          8: 'END_GAME_WIN',
+          9: 'END_GAME_LOST'
+        }
+      print strs[self.state]
+      return
+
     if(self.state == GameState.COLOR_SELECTION):
       choices = (psmoveapi.Button.SQUARE, psmoveapi.Button.TRIANGLE,
         psmoveapi.Button.CROSS, psmoveapi.Button.CIRCLE)
@@ -224,36 +278,59 @@ class SIORacket(racket.Racket):
           return
 
     if((self.color_choice is not None) and (psmoveapi.Button.MOVE in buttons)):
-      self.sio_init_color_choice(*self.color_choice)
+      self.sio_init_color_choice(self.color_choice)
       self.state = GameState.COLOR_WAIT
 
   ######################### Housekeeping Events ################################
 
   def on_init(self, controller):
     print 'psmove:', controller, 'connected!'
-    controller.color = psmoveapi.RGB(1.0, 1.0, 1.0)
+    controller.color = psmoveapi.RGB(*SIORacket.COLOR_CLEAR)
 
   def on_leave(self, controller):
     print 'psmove:', controller, 'disconnected!'
 
   def on_refresh(self, controller, swing_state):
     # Here is where most of the day-to-day logic takes effect
-    if(self.state == GameState.PRE_GAME):
-      return False
+    if(self.state == GameState.PRE_GAME
+        or self.state == GameState.COLOR_SELECTION
+        or self.state == GameState.COLOR_WAIT
+        or self.state == GameState.START_WAIT):
+      return self.enable_swings
 
-    if(self.state ==
-    GameState.PRE_GAME
-    GameState.COLOR_SELECTION
-    GameState.COLOR_WAIT
-    GameState.START_WAIT
-    GameState.SERVER
-    GameState.GAMEPLAY
-    GameState.WON_RALLY
-    GameState.LOST_RALLY
-    GameState.END_GAME_WIN
-    GameState.END_GAME_LOST
+    # To be changed below
+    next_state = None
+    enable_swings = False
 
-    return True
+    if(self.state == GameState.SERVER
+        or self.state == GameState.WON_RALLY
+        or self.state == GameState.LOST_RALLY):
+      next_state = GameState.GAMEPLAY
+
+    elif(self.state == GameState.GAMEPLAY):
+      enable_swings = True
+
+    # elif(self.state == GameState.END_GAME_WIN
+    #     or self.state == GameState.END_GAME_LOST):
+    #   pass
+
+    if(self.state_data is not None):
+      if('events' in self.state_data):
+        events = self.state_data['events']
+
+        if(len(events) == 0 or events[0].done()):
+          if(next_state is not None):
+            self.state = next_state
+            del self.state_data['events']
+        else:
+          (event, color) = events[0]
+          color = self.color_choice if(color is None) else color
+          event.do(controller, color)
+
+      elif(len(self.state_data) == 0):
+        self.state_data = None
+
+    return enable_swings
 
   def exit(self):
     self.sio.disconnect()

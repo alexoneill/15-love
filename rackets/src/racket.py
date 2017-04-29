@@ -34,6 +34,14 @@ class Racket(psmoveapi.PSMoveAPI):
     # Initialize internal state mahine
     self._state = SwingState.IDLE
     self._hand = Handedness.RIGHT
+    self._disable = False
+    self._enable = False
+
+  def _optional_callback(self, name, *args):
+    if(hasattr(self, name)):
+      return getattr(self, name)(*args)
+
+    return None
 
   def _step_backswing(self, controller):
     # Transition from IDLE to BACKSWING if it makes sense
@@ -50,7 +58,7 @@ class Racket(psmoveapi.PSMoveAPI):
             )
 
           # Call our callback if defined
-          (self.on_backswing or (lambda *args: None))(controller, self._hand)
+          self._optional_callback('on_backswing', controller, self._hand)
 
   def _step_swing(self, controller):
     # Transition from TRANSITION to SWING if it makes sense
@@ -60,7 +68,10 @@ class Racket(psmoveapi.PSMoveAPI):
           self._state = SwingState.SWING
 
           # Call our callback if defined
-          (self.on_swing or (lambda *args: None))(controller, self._hand)
+          strength = controller.accelerometer.length() - Racket.SWING_PAUSE
+          strength = min(1.0, max(0.0, strength))
+          (self.on_swing or (lambda *args: None))(
+              controller, self._hand, strength)
 
   def _step_idle(self, controller):
     # Transition from SWING to IDLE if it makes sense
@@ -69,7 +80,7 @@ class Racket(psmoveapi.PSMoveAPI):
         self._state = SwingState.IDLE
 
         # Call our callback if defined
-        (self.on_idle or (lambda *args: None))(controller, self._hand)
+        self._optional_callback('on_idle', controller, self._hand)
 
   def _step_state(self, controller):
     # Step through the states
@@ -77,16 +88,38 @@ class Racket(psmoveapi.PSMoveAPI):
     self._step_swing(controller)
     self._step_idle(controller)
 
+  def _get_button(self, controller):
+    # See which button was pressed
+    buttons = set([])
+    for button in (psmoveapi.Button.TRIANGLE, psmoveapi.Button.CIRCLE,
+        psmoveapi.Button.CROSS, psmoveapi.Button.SQUARE,
+        psmoveapi.Button.SELECT, psmoveapi.Button.START,
+        psmoveapi.Button.PS, psmoveapi.Button.MOVE):
+      if(controller.now_pressed(button)):
+        buttons.add(button)
+
+    return (buttons if(buttons) else None)
+
   def on_connect(self, controller):
     # Call our callback if defined
-    (self.on_init or (lambda *args: None))(controller)
+    self._optional_callback('on_init', controller)
 
   def on_disconnect(self, controller):
     # Call our callback if defined
-    (self.on_leave or (lambda *args: None))(controller)
+    self._optional_callback('on_leave', controller)
 
   def on_update(self, controller):
-    self._step_state(controller)
+    # Enable swing events if requested
+    if(self._enable):
+      self._step_state(controller)
+
+    # Create a button event
+    buttons = self._get_button(controller)
+    if(buttons is not None):
+      self._optional_callback('on_button', controller, buttons)
 
     # Call our callback if defined
-    (self.on_refresh or (lambda *args: None))(controller)
+    enable = self._optional_callback('on_refresh', controller, self._state)
+    if(enable is not None):
+      self._enable = enable
+
