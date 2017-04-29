@@ -64,7 +64,7 @@ class TennisShow(Show):
         if event:
             name, data = event
             if name == "game_reset":
-                self.reset()
+                self.reset(data)
                 return
 
         # do all the current animations. (use ``keys'' so we can delete keys as we go)
