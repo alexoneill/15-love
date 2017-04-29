@@ -14,8 +14,13 @@ class LightTimer(object):
         self.bot = bot
         self.color = color
         self.fade_frames = fade_frames
+        self.just_inserted = True
 
     def fade(self):
+        # don't fade the first time we're inserted
+        if self.just_inserted and self.fade_frames > 0:
+            self.just_inserted = False
+            return
         if isinstance(self.fade_frames, int):
             self.fade_frames -= 1
             # fade by halving distance to 255 for r, g, and b
