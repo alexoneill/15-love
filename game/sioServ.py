@@ -70,7 +70,7 @@ def init_color_choice(sid, colorData):
 
 @sio.on('game_swing')
 def game_swing(sid, swingData):
-    inqueue.put(('swing', swingData))
+    inqueue.put(('game_swing', swingData))
 
 
 @sio.on('game_reset')

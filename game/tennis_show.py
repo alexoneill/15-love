@@ -34,7 +34,7 @@ class TennisShow(Show):
         ball_color = Colors.LIME
 
         # how long to make the swing
-        max_swing = 25 # sequences
+        max_swing = 28 # sequences
 
         p1 = Player(color=p1_color, origin=p1_seq, max_swing=max_swing, velocity=2)
         p2 = Player(color=p2_color, origin=p2_seq, max_swing=max_swing, velocity=-2)
@@ -80,7 +80,10 @@ class TennisShow(Show):
         if event:
             name, data = event
             # currently, there's nothing we do in the start show, but this could change.
-            { }.get(name, unrecognized_event(name))(data)
+            {
+              "game_reset": self.reset,
+              "init_color_choice": self.choose_color
+            }.get(name, unrecognized_event(name))(data)
 
         # Don't have a start show yet, so just start the game loop
         del self.actions["start_show"]
@@ -94,8 +97,10 @@ class TennisShow(Show):
         if event:
             name, data = event
             # Python's version of a switch statement? It's event dispatch
-            { "swing" : self.swing,
-              "press" : self.press  }.get(name, unrecognized_event(name))(data)
+            {
+              "game_swing" : self.swing,
+              "game_reset": self.reset
+            }.get(name, unrecognized_event(name))(data)
 
         fade_frames = 20 #frames
         for obj in self.moving_objects:
@@ -120,13 +125,11 @@ class TennisShow(Show):
                 opponent.serving = True
                 player.serving = False
 
-        if data["player"] == 1:
+        if data["player_num"] == 1:
             print "Player 1 swung"
-            self.outqueue.put(("swing", { "player": 1 }))
             player_swing(self.p1, opponent=self.p2)
-        elif data["player"] == 2:
+        elif data["player_num"] == 2:
             print "Player 2 swung"
-            self.outqueue.put(("swing", { "player": 2 }))
             player_swing(self.p2, opponent=self.p1)
 
     # button press event received
@@ -208,6 +211,6 @@ class TennisShow(Show):
     def firework_show(self, _):
         print "Showing fireworks"
         winning_player = 1 if self.players[1].score == 4 else 2 # decide which player won
-        self.outqueue.put (("gameover", { "winner": winning_player }))
+        self.outqueue.put (("game_over", { "player_num": winning_player }))
         # TODO: Make a fun firework show at the end. Maybe design in Lumiverse??
         self.running = False # just end the show for now
