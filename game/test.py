@@ -37,6 +37,9 @@ def main(bridge):
         global thread_continuing
         while thread_continuing:
             inp = raw_input()
+            if inp == "r":
+                inqueue.put(("game_reset", None))
+                continue
             try:
                 x = int(inp[0])
                 if len(inp) > 1:

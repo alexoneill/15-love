@@ -60,6 +60,13 @@ class TennisShow(Show):
     def update(self):
         event = self.receive_event()
 
+        # globally check for reset event
+        if event:
+            name, data = event
+            if name == "game_reset":
+                self.reset()
+                return
+
         # do all the current animations. (use ``keys'' so we can delete keys as we go)
         for key in self.actions.keys():
             self.actions[key](event)
@@ -84,7 +91,6 @@ class TennisShow(Show):
             if event:
                 name, data = event
                 {
-                  "game_reset": self.reset,
                   "init_color_choice": self.choose_color
                 }.get(name, unrecognized_event(name))(data)
 
@@ -143,7 +149,6 @@ class TennisShow(Show):
             # Python's version of a switch statement? It's event dispatch
             {
               "game_swing" : self.swing,
-              "game_reset": self.reset
             }.get(name, unrecognized_event(name))(data)
 
         fade_frames = 20 #frames
