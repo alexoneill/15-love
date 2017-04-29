@@ -1,22 +1,27 @@
 Racket - Listen
-===============
-init_color_reject: None
+===========================
+init_color_reject: dict
+  - player_num: int
 
-init_color_confirm: None
+init_color_confirm: dict
+  - player_num: int
 
-game_missed_ball: None
+game_missed_ball: dict
+  - player_num: int
 
-game_won_rally: None
+game_won_rally: dict
+  - player_num: int
 
 game_hit_ball: dict
   - strength: float[0, 1]
 
-game_is_server: None
+game_is_server: dict
+  - player_num: int
 
 game_start: None
 
 game_over: dict
-  - is_winner: bool
+  - player_num: int
 
 game_restart: None
 
