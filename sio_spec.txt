@@ -23,6 +23,7 @@ game_restart: None
 Racket - Emit
 =============
 init_color_choice: dict
+  - player_num: int
   - color: (float[0, 1] * float[0, 1] * float[0, 1])
 
 game_swing: dict

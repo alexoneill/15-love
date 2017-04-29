@@ -335,7 +335,8 @@ class SIORacket(racket.Racket):
   def sio_init_color_choice(self, color):
     # Method to communicate the color choice
     self._sio.emit('init_color_choice', {
-        'color': color
+        'color': color,
+        'player': self.player_num
       })
 
   def sio_game_swing(self, hand, strength):
