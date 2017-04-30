@@ -75,8 +75,18 @@ class ScoreBars(Animation):
 
             self.frames_till_end -= 1
 
-# start game flashing where to stand
-class StartAnimation(object):
+# Transitions between colors
+class SolidTransitionAnimation(object):
+    def __init__(self, start, end, color):
+        self.color = color
+        self.next_color = color
+        self.start = start
+        self.end = end
+
+# TODO: write update and render
+
+# Have section of bridge pulse
+class PulseAnimation(object):
     FADE_TIME = 40 # 1 second
     def __init__(self, start, end, color=Colors.WHITE):
         self.fade_level = 0
@@ -94,14 +104,14 @@ class StartAnimation(object):
         else:              self.fade_level -= 1
 
         # switch direction of fade
-        if self.fade_level == StartAnimation.FADE_TIME:
+        if self.fade_level == PulseAnimation.FADE_TIME:
             self.fading_in = False
         if self.fade_level == 0:
             self.fading_in = True
 
     def render(self, bridge):
         for i in xrange(self.start_seq, self.end_seq+1): #inclusive
-            frac = self.fade_level / StartAnimation.FADE_TIME # python3 division
+            frac = self.fade_level / PulseAnimation.FADE_TIME # python3 division
             # fade color appropriately
             color = tuple(map(lambda x: frac * x, self.color))
             bridge.set_fade(i, color, 1, ANIMATION_PRIORITY) # 1 frame

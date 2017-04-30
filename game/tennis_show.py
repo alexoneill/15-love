@@ -102,7 +102,7 @@ class TennisShow(Show):
             lo, hi = ball.x, ball.x + 2
 
         # show flashing ball animation
-        animations = [ StartAnimation(start=lo, end=hi, color=ball.color) ]
+        animations = [ PulseAnimation(start=lo, end=hi, color=ball.color) ]
         self.actions["flashing_ball"] = lambda event: self.animate(animations)
 
     """*******************************************************************************
@@ -112,8 +112,8 @@ class TennisShow(Show):
     def start_show(self, event):
         p1 = self.p1
         p2 = self.p2
-        p1_animation = StartAnimation(start=p1.origin, end=p1.origin + p1.max_swing)
-        p2_animation = StartAnimation(start=p2.origin - p2.max_swing, end=p2.origin)
+        p1_animation = PulseAnimation(start=p1.origin, end=p1.origin + p1.max_swing)
+        p2_animation = PulseAnimation(start=p2.origin - p2.max_swing, end=p2.origin)
 
         # define how many frames to wait between both players selecting colors and starting the game
         def flash_players(event):
