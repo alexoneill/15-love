@@ -88,6 +88,8 @@ class TennisShow(Show):
         p2 = self.p2
         p1_animation = StartAnimation(start=p1.origin, end=p1.origin + p1.max_swing)
         p2_animation = StartAnimation(start=p2.origin - p2.max_swing, end=p2.origin)
+
+        # define how many frames to wait between both players selecting colors and starting the game
         def flash_players(event):
             if event:
                 name, data = event
@@ -104,13 +106,20 @@ class TennisShow(Show):
             p2_animation.render(self.bridge)
 
 
+            # if both players have selected their color and the color has faded out
+            if p1.color != None and p2.color != None and p1_animation.fade_level == 0:
+                # start the game loop
+                del self.actions["flash_players"]
+                self.outqueue.put(("game_start"))
+                print "Entering game loop"
+                self.actions["game_loop"] = self.game_loop
+
         # delegate to flash_players
         del self.actions["start_show"]
         self.actions["flash_players"] = flash_players
 
         # make sure we capture the current event
         flash_players(event)
-
 
     def choose_color(self, data):
         color = data["color"]
@@ -131,14 +140,6 @@ class TennisShow(Show):
             self.outqueue.put(("init_color_confirm", { "player_num": player_num }))
             # set color
             player.color = color
-
-        # if both players have selected their color
-        if player.color != None and other_player.color != None:
-            # start the game loop
-            del self.actions["flash_players"]
-            self.outqueue.put(("game_start"))
-            print "Entering game loop"
-            self.actions["game_loop"] = self.game_loop
 
     """****************************************************************
     *  In the game loop, we render the balls and player swings, check *
