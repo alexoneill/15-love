@@ -34,7 +34,7 @@ class TennisShow(Show):
 
         p1 = Player(color=None, origin=p1_seq, max_swing=max_swing, velocity=2)
         p2 = Player(color=None, origin=p2_seq, max_swing=max_swing, velocity=-2)
-        ball = Ball(color=ball_color, origin=p1_seq, max_seq=p2_seq, velocity=2)
+        ball = Ball(color=ball_color, origin=p1_seq, max_seq=p2_seq, velocity=3)
 
         # p1 serves first
         p1.serving = True
