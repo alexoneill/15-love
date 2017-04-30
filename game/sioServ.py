@@ -1,8 +1,11 @@
 import socketio
-import Queue
 import eventlet
 import eventlet.wsgi
 from flask import Flask
+
+import Queue
+from tennis_show import TennisShow
+import current_bridge
 
 ###############################################################################
 '''SocketIO based server for 15-Love
@@ -15,45 +18,16 @@ sio_spec.txt'''
 # Define server and queues
 sio = socketio.Server()
 app = Flask(__name__)
-
-inqueue = Queue.Queue()
-outqueue = Queue.Queue()
-
+inqueue = Queue()
 
 ###############################################################################
 # Emit wrappers, to be called in the game to send events
 ###############################################################################
-def init_color_reject():
-    sio.emit('init_color_reject')
-
-
-def init_color_confrim():
-    sio.emit('init_color_confirm')
-
-
-def game_missed_ball():
-    sio.emit('game_missed_ball')
-
-
-def game_hit_ball(hitData):
-    sio.emit('game_hit_ball', hitData)
-
-
-def game_start():
-    sio.emit('game_start')
-
-
-def game_is_server():
-    sio.emit('game_is_server')
-
-
-def game_over(is_winner):
-    sio.emit('game_over', is_winner)
-
-
-def game_restart():
-    sio.emit('game_restart')
-
+class OutQueue:
+    def put(event):
+        global sio
+        print "Emitting event to client: %s" % event
+        sio.emit(*event)
 
 ###############################################################################
 # Event Handlers
@@ -87,8 +61,12 @@ def disconnect(sid):
 # Run
 ###############################################################################
 if __name__ == '__main__':
+    show = TennisShow(current_bridge.bridge(), inqueue=inqueue, outqueue=OutQueue())
+    print "Madeshow"
+
     # wrap Flask application with engineio's middleware
     app = socketio.Middleware(sio, app)
 
     # deploy as an eventlet WSGI server
     eventlet.wsgi.server(eventlet.listen(('localhost', 8000)), app)
+    show.run(framerate=40)

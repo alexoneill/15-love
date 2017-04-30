@@ -11,12 +11,16 @@ from colors import Colors
 
 thread_continuing = True
 
+class OutQueue:
+    def put(self, event):
+        print "Put in outqueue: %s" % str(event)
+
 def main(bridge):
     global thread_continuing
     print "Usage: Press 1 for player 1 swing, 2 for player 2 swing (followed by Enter)"
     print "To quit, press Ctrl+C and then Enter"
     inqueue = Queue.Queue()
-    outqueue = Queue.Queue()
+    outqueue = OutQueue()
     show = TennisShow(bridge(), inqueue=inqueue, outqueue=outqueue)
 
     def cause_problems():
