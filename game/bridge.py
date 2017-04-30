@@ -2,6 +2,7 @@
 # bridge.py
 # nroberts 04/10/2017
 # Simple high level interface keeping track of what to light up
+from colors import Colors
 
 class LightTimer(object):
     # sequence: light to light up
@@ -24,8 +25,7 @@ class LightTimer(object):
         if isinstance(self.fade_frames, int):
             self.fade_frames -= 1
             # fade by halving distance to 255 for r, g, and b
-            fade_color = lambda v: 0.95 * v
-            self.color = tuple(map(fade_color, self.color))
+            self.color = Colors.fade(self.color, 0.95)
             if self.fade_frames == 0:
                 # then we have to send a clear command
                 self.color = 0, 0, 0

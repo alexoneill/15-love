@@ -8,8 +8,8 @@ from colors import Colors
 
 BALL_PRIORITY = 3
 PLAYER_PRIORITY = 4
-SCORE_PRIORITY = 5
-ANIMATION_PRIORITY = 6
+ANIMATION_PRIORITY = 5
+SCORE_PRIORITY = 100
 
 # 1 if positive, -1 if negative
 def sign(x):
@@ -76,14 +76,21 @@ class ScoreBars(Animation):
             self.frames_till_end -= 1
 
 # Transitions between colors
-class SolidTransitionAnimation(object):
+class TransitionAnimation(object):
     def __init__(self, start, end, color):
         self.color = color
         self.next_color = color
         self.start = start
         self.end = end
+        self.is_active = True
 
-# TODO: write update and render
+    def update(self):
+        # weight current color more than next color
+        self.color = Colors.weighted_avg(self.color, self.next_color, 100, 1)
+
+    def render(self, bridge):
+        for i in xrange(self.start, self.end+1): # inclusive
+            bridge.set_fade(i, self.color, 1, ANIMATION_PRIORITY) # 1 frame
 
 # Have section of bridge pulse
 class PulseAnimation(object):
@@ -113,7 +120,7 @@ class PulseAnimation(object):
         for i in xrange(self.start_seq, self.end_seq+1): #inclusive
             frac = self.fade_level / PulseAnimation.FADE_TIME # python3 division
             # fade color appropriately
-            color = tuple(map(lambda x: frac * x, self.color))
+            color = Colors.fade(self.color, frac)
             bridge.set_fade(i, color, 1, ANIMATION_PRIORITY) # 1 frame
 
 # Class for the pulse animation after someone scores

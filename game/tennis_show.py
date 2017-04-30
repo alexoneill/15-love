@@ -24,7 +24,7 @@ class TennisShow(Show):
 
     def init(self):
         # offset of start panel for player 1 and player 2
-        p1_seq = Bridge.SEQ_LO + 12
+        p1_seq = Bridge.SEQ_LO + 11
         p2_seq = Bridge.SEQ_HI
 
         ball_color = Colors.YELLOW
@@ -45,11 +45,18 @@ class TennisShow(Show):
         # set up instance variables
         self.p1, self.p2, self.ball = p1, p2, ball
 
-        # define what functions we enter at the start
-        self.actions = { "start_show" : self.start_show }
-
         #  player 1 and player 2
         self.players = { 1 : p1, 2 : p2 }
+
+        #show animation on the end of the bridge
+        start = Bridge.SEQ_LO
+        end = self.p1.origin - 1
+        color = Colors.BLANK
+        self.end_bridge_animation = TransitionAnimation(start=start, end=end, color=color)
+        end_bridge = self.animate([ self.end_bridge_animation ])
+
+        # define what functions we enter at the start
+        self.actions = { "start_show" : self.start_show, "end_bridge": end_bridge }
 
     """**********************************************************************************
     *   What the update does:                                                           *
@@ -85,6 +92,12 @@ class TennisShow(Show):
 
     def reset_rally(self):
         print "Starting game loop"
+
+        # make the end of the bridge transition to the next color
+        self.end_bridge_animation.next_color = Colors.weighted_avg(
+            self.p1.color, self.p2.color, self.p1.score, self.p2.score
+        )
+
         # inform player they're serving
         serving_player = 1 if self.players[1].serving else 2
         self.outqueue.put(("game_is_server", { "player_num": serving_player }))
@@ -103,7 +116,7 @@ class TennisShow(Show):
 
         # show flashing ball animation
         animations = [ PulseAnimation(start=lo, end=hi, color=ball.color) ]
-        self.actions["flashing_ball"] = lambda event: self.animate(animations)
+        self.actions["flashing_ball"] = self.animate(animations)
 
     """*******************************************************************************
     *  The start of the show performs a brief light show. When both                  *
@@ -229,19 +242,22 @@ class TennisShow(Show):
 
     # show several animations at once
     def animate(self, animations, name=None, on_complete=lambda: None):
-        any_active = False
+        def on_event(_): # curry
+            any_active = False
 
-        # update and render all animations
-        for animation in animations:
-            if animation.is_active:
-                any_active = True
-                animation.render(self.bridge)
-                animation.update()
+            # update and render all animations
+            for animation in animations:
+                if animation.is_active:
+                    any_active = True
+                    animation.render(self.bridge)
+                    animation.update()
 
-        # if there's nothing left to animate, resume normal flow
-        if not any_active:
-            del self.actions[name]
-            on_complete()
+            # if there's nothing left to animate, resume normal flow
+            if not any_active:
+                del self.actions[name]
+                on_complete()
+
+        return on_event
 
     @staticmethod
     def switch(player_num):
@@ -275,7 +291,7 @@ class TennisShow(Show):
 
         # Engulf entire bridge in red after a missed point
         animations = [ ScoreAnimation(p1=self.p1, p2=self.p2, color=player.color) ]
-        self.actions["score"] = lambda event: self.animate(animations, "score", on_complete)
+        self.actions["score"] = self.animate(animations, "score", on_complete)
 
     # Show a show at the end for the winning player (eventually)
     def firework_show(self, _):
