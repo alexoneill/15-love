@@ -18,6 +18,8 @@ def random_color():
     func = lambda: random.randint(0, 255) / 255.0
     return (func(), func(), func())
 
+def sign(x): return 1 if x > 0 else -1
+
 class TennisShow(Show):
 
     def init(self):
@@ -62,6 +64,7 @@ class TennisShow(Show):
 
         # globally check for reset event
         if event:
+            print "Received %s" % str(event)
             name, data = event
             if name == "game_reset":
                 self.reset(data)
@@ -153,7 +156,7 @@ class TennisShow(Show):
               "game_swing" : self.swing,
             }.get(name, unrecognized_event(name))(data)
 
-        fade_frames = 20 #frames
+        fade_frames = 30 #frames
         for obj in self.moving_objects:
           obj.render(self.bridge, fade_frames)
 
@@ -169,6 +172,7 @@ class TennisShow(Show):
     def swing(self, data):
         def player_swing(player, opponent):
             player.swing()
+            player.set_strength(data["strength"])
             ball = self.ball
             # serve if it is your turn to serve
             if player.serving and not ball.is_active:
@@ -194,11 +198,11 @@ class TennisShow(Show):
             if player.velocity > 0 and ball.velocity < 0 and bseq <= pseq:
                 print "Player 1 hit the ball"
                 self.outqueue.put(("game_hit_ball", { "player_num": 1 }))
-                ball.hit()
+                ball.hit(self.p1)
             elif player.velocity < 0 and ball.velocity > 0 and bseq >= pseq:
                 print "Player 2 hit the ball"
                 self.outqueue.put(("game_hit_ball", { "player_num": 2 }))
-                ball.hit()
+                ball.hit(self.p2)
 
     # show several animations at once
     def animate(self, animations, on_complete):

@@ -6,8 +6,8 @@ from __future__ import division
 from bridge import Bridge
 from colors import Colors
 
-PLAYER_PRIORITY = 3
-BALL_PRIORITY = 4
+BALL_PRIORITY = 3
+PLAYER_PRIORITY = 4
 SCORE_PRIORITY = 5
 
 # 1 if positive, -1 if negative
@@ -65,13 +65,11 @@ class ScoreBars(Animation):
             self.x = self.end_x
             self.velocity = 0
             self.frames_till_end = 80 # frames to hang suspended
-            print "Score reached destination at %d" % self.x
 
         # run until dead
         if self.velocity == 0:
             # die
             if self.frames_till_end == 0:
-                print "Score done showing"
                 self.is_active = False
 
             self.frames_till_end -= 1
@@ -197,6 +195,7 @@ class ScoreAnimation(object):
 
 # Class that represents ball state, including velocity and location
 class Ball(Animation):
+    INCREASE = 1.05
     # max_seq is the furthest sequence the ball is allowed to go to
     def init(self, max_seq):
         self.max_seq = max_seq
@@ -216,9 +215,9 @@ class Ball(Animation):
                 # make the show perform the actions it does when a player misses
                 show.on_missed_ball(awarded_player)
 
-    def hit(self):
+    def hit(self, player):
         # change direction when hit
-        self.velocity = -self.velocity
+        self.velocity = -self.velocity * Ball.INCREASE * player.strength
 
 # Class that represents where the player's state, including swing location
 class Player(Animation):
@@ -237,11 +236,16 @@ class Player(Animation):
 
     def serve(self, ball):
         # set ball to active with new velocity
-        ball.velocity = ball.starting_velocity * self.velocity
+        ball.velocity = ball.starting_velocity * sign(self.velocity) * self.strength
         ball.x =  self.origin
         print "Player hit ball"
         print "Ball starting at %d, moving with velocity %d" % (ball.x, ball.velocity)
         ball.is_active = True
+
+    def set_strength(self, strength):
+        self.strength = strength
+        multiplier = 2 * sign(self.velocity)
+        self.velocity = multiplier * strength
 
     def update(self, show):
         if self.is_active:

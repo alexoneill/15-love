@@ -39,7 +39,7 @@ def connect(sid, environ):
 
 @sio.on('init_color_choice')
 def init_color_choice(sid, colorData):
-    inqueue.add(('init_color_choice', colorData))
+    inqueue.put(('init_color_choice', colorData))
 
 
 @sio.on('game_swing')
@@ -49,7 +49,7 @@ def game_swing(sid, swingData):
 
 @sio.on('game_reset')
 def game_reset(sid):
-    inqueue.add(('game_reset', None))
+    inqueue.put(('game_reset', None))
 
 
 @sio.on('disconnect')
