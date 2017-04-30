@@ -142,8 +142,8 @@ class ScoreAnimation(object):
     def make_scorebar_animations(self):
         animations = []
         p1, p2 = self.p1, self.p2
-        p1_offset = p1.origin + p1.max_swing - 8 * ScoreAnimation.SEPARATION
-        p2_offset = p2.origin - p2.max_swing - 8 * ScoreAnimation.SEPARATION
+        p1_offset = p1.origin + p1.max_swing - 6 * ScoreAnimation.SEPARATION
+        p2_offset = p2.origin - p2.max_swing - 6 * ScoreAnimation.SEPARATION
 
         # constants used when creating animations
         v = ScoreAnimation.VELOCITY
