@@ -9,6 +9,7 @@ from colors import Colors
 BALL_PRIORITY = 3
 PLAYER_PRIORITY = 4
 SCORE_PRIORITY = 5
+ANIMATION_PRIORITY = 6
 
 # 1 if positive, -1 if negative
 def sign(x):
@@ -77,14 +78,15 @@ class ScoreBars(Animation):
 # start game flashing where to stand
 class StartAnimation(object):
     FADE_TIME = 40 # 1 second
-    def __init__(self, start, end):
+    def __init__(self, start, end, color=Colors.WHITE):
         self.fade_level = 0
         self.start_seq = start
         self.end_seq = end
         self.fading_in = True
-        self.color = Colors.WHITE
+        self.color = color
+        self.is_active = True # need this to be an animation
 
-    def update(self, color):
+    def update(self, color=None):
         # update color if set
         if color: self.color = color
 
@@ -98,11 +100,11 @@ class StartAnimation(object):
             self.fading_in = True
 
     def render(self, bridge):
-        for i in xrange(self.start_seq, self.end_seq):
+        for i in xrange(self.start_seq, self.end_seq+1): #inclusive
             frac = self.fade_level / StartAnimation.FADE_TIME # python3 division
             # fade color appropriately
             color = tuple(map(lambda x: frac * x, self.color))
-            bridge.set_fade(i, color, 1, 1) # 1 frame, 1 priority
+            bridge.set_fade(i, color, 1, ANIMATION_PRIORITY) # 1 frame
 
 # Class for the pulse animation after someone scores
 # Also displays score for each player
@@ -195,7 +197,7 @@ class ScoreAnimation(object):
 
 # Class that represents ball state, including velocity and location
 class Ball(Animation):
-    INCREASE = 1.05
+    INCREASE = 1.05 # multiplicative increase of ball speed
     # max_seq is the furthest sequence the ball is allowed to go to
     def init(self, max_seq):
         self.max_seq = max_seq
@@ -217,7 +219,10 @@ class Ball(Animation):
 
     def hit(self, player):
         # change direction when hit
-        self.velocity = -self.velocity * Ball.INCREASE * player.strength
+        if self.velocity == 0:
+            self.velocity = self.starting_velocity * sign(player.velocity) * player.strength
+        else:
+            self.velocity = -self.velocity * Ball.INCREASE * player.strength
 
 # Class that represents where the player's state, including swing location
 class Player(Animation):
@@ -234,14 +239,6 @@ class Player(Animation):
         self.is_active = True
         self.x = self.origin
 
-    def serve(self, ball):
-        # set ball to active with new velocity
-        ball.velocity = ball.starting_velocity * sign(self.velocity) * self.strength
-        ball.x =  self.origin
-        print "Player hit ball"
-        print "Ball starting at %d, moving with velocity %d" % (ball.x, ball.velocity)
-        ball.is_active = True
-
     def set_strength(self, strength):
         self.strength = strength
         multiplier = 2 * sign(self.velocity)
@@ -253,6 +250,6 @@ class Player(Animation):
             self.x += self.velocity
 
             # check if the swing is in the right range
-            if abs(self.x - self.origin) >= self.max_swing:
+            if abs(self.x - self.origin) > self.max_swing:
                 print "Player done swinging at %d" % self.x
                 self.is_active = False

@@ -72,7 +72,8 @@ class TennisShow(Show):
 
         # do all the current animations. (use ``keys'' so we can delete keys as we go)
         for key in self.actions.keys():
-            self.actions[key](event)
+            # have default action if key has been since deleted
+            self.actions.get(key, lambda _: None)(event)
 
     """*******************************************************
     * Restart game completely, going back to color selection *
@@ -81,6 +82,28 @@ class TennisShow(Show):
         print "Restarting game"
         self.outqueue.put(("game_restart"))
         self.init() # just call the init function again
+
+    def reset_rally(self):
+        print "Starting game loop"
+        # inform player they're serving
+        serving_player = 1 if self.players[1].serving else 2
+        self.outqueue.put(("game_is_server", { "player_num": serving_player }))
+        self.actions["game_loop"] = self.game_loop
+
+        # get ball ready to be served
+        ball = self.ball
+        ball.is_active = True
+        ball.velocity = 0
+        if serving_player == 1:
+            ball.x = self.p1.origin + self.p1.max_swing
+            lo, hi = ball.x - 2, ball.x
+        else:
+            ball.x = self.p2.origin - self.p2.max_swing
+            lo, hi = ball.x, ball.x + 2
+
+        # show flashing ball animation
+        animations = [ StartAnimation(start=lo, end=hi, color=ball.color) ]
+        self.actions["flashing_ball"] = lambda event: self.animate(animations)
 
     """*******************************************************************************
     *  The start of the show performs a brief light show. When both                  *
@@ -114,8 +137,7 @@ class TennisShow(Show):
                 # start the game loop
                 del self.actions["flash_players"]
                 self.outqueue.put(("game_start"))
-                print "Entering game loop"
-                self.actions["game_loop"] = self.game_loop
+                self.reset_rally()
 
         # delegate to flash_players
         del self.actions["start_show"]
@@ -156,13 +178,13 @@ class TennisShow(Show):
               "game_swing" : self.swing,
             }.get(name, unrecognized_event(name))(data)
 
-        fade_frames = 30 #frames
-        for obj in self.moving_objects:
-          obj.render(self.bridge, fade_frames)
-
         # check for hitting the ball
         self.check_for_hit(self.p1)
         self.check_for_hit(self.p2)
+
+        fade_frames = 30 #frames
+        for obj in self.moving_objects:
+          obj.render(self.bridge, fade_frames)
 
         # Update game objects
         for obj in self.moving_objects:
@@ -175,8 +197,7 @@ class TennisShow(Show):
             player.set_strength(data["strength"])
             ball = self.ball
             # serve if it is your turn to serve
-            if player.serving and not ball.is_active:
-                player.serve(ball)
+            if player.serving and ball.velocity == 0:
                 opponent.serving = True
                 player.serving = False
 
@@ -195,17 +216,19 @@ class TennisShow(Show):
             bseq = ball.get_seq()
 
             # hit ball if it has crossed where the player is swinging
-            if player.velocity > 0 and ball.velocity < 0 and bseq <= pseq:
-                print "Player 1 hit the ball"
+            if player.velocity > 0 and ball.velocity <= 0 and bseq <= pseq:
+                self.actions.pop("flashing_ball", None) # remove animation from dict
                 self.outqueue.put(("game_hit_ball", { "player_num": 1 }))
                 ball.hit(self.p1)
-            elif player.velocity < 0 and ball.velocity > 0 and bseq >= pseq:
-                print "Player 2 hit the ball"
+                print "Player 1 hit ball traveling with velocity %d" % ball.velocity
+            elif player.velocity < 0 and ball.velocity >= 0 and bseq >= pseq:
+                self.actions.pop("flashing_ball", None) # remove animation from dict
                 self.outqueue.put(("game_hit_ball", { "player_num": 2 }))
                 ball.hit(self.p2)
+                print "Player 2 hit ball traveling with velocity %.3f" % ball.velocity
 
     # show several animations at once
-    def animate(self, animations, on_complete):
+    def animate(self, animations, name=None, on_complete=lambda: None):
         any_active = False
 
         # update and render all animations
@@ -217,7 +240,7 @@ class TennisShow(Show):
 
         # if there's nothing left to animate, resume normal flow
         if not any_active:
-            del self.actions["animate"]
+            del self.actions[name]
             on_complete()
 
     @staticmethod
@@ -243,22 +266,16 @@ class TennisShow(Show):
         # stop running game loop
         del self.actions["game_loop"]
 
-        # TODO: Display score in some way on the bridge
-
         # what to do after showing red animation
         def on_complete():
             if player.score == 4:
                 self.actions["firework_show"] = self.firework_show
             else:
-                print "Resuming game loop"
-                # inform player they're serving
-                serving_player = 1 if self.players[1].serving else 2
-                self.outqueue.put(("game_is_server", { "player_num": serving_player }))
-                self.actions["game_loop"] = self.game_loop
+                self.reset_rally()
 
         # Engulf entire bridge in red after a missed point
         animations = [ ScoreAnimation(p1=self.p1, p2=self.p2, color=player.color) ]
-        self.actions["animate"] = lambda event: self.animate(animations, on_complete)
+        self.actions["score"] = lambda event: self.animate(animations, "score", on_complete)
 
     # Show a show at the end for the winning player (eventually)
     def firework_show(self, _):
