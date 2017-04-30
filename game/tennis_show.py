@@ -18,9 +18,22 @@ def random_color():
     func = lambda: random.randint(0, 255) / 255.0
     return (func(), func(), func())
 
+def argmax(f, choices):
+    max = None
+    arg = None
+    for c in choices:
+        val = f(c)
+        if max == None or val > max:
+            max = val
+            arg = c
+    return arg
+
 def sign(x): return 1 if x > 0 else -1
 
 class TennisShow(Show):
+
+    NUM_FIREWORKS = 20 # number of fireworks to show at the end
+    POINTS_TO_WIN = 4 # number of points to win
 
     def init(self):
         # offset of start panel for player 1 and player 2
@@ -74,7 +87,7 @@ class TennisShow(Show):
             print "Received %s" % str(event)
             name, data = event
             if name == "game_reset":
-                self.reset(data)
+                self.reset()
                 return
 
         # do all the current animations. (use ``keys'' so we can delete keys as we go)
@@ -85,7 +98,7 @@ class TennisShow(Show):
     """*******************************************************
     * Restart game completely, going back to color selection *
     *******************************************************"""
-    def reset(self, data):
+    def reset(self, **kwargs):
         print "Restarting game"
         self.outqueue.put(("game_restart"))
         self.init() # just call the init function again
@@ -233,7 +246,7 @@ class TennisShow(Show):
                 self.actions.pop("flashing_ball", None) # remove animation from dict
                 self.outqueue.put(("game_hit_ball", { "player_num": 1 }))
                 ball.hit(self.p1)
-                print "Player 1 hit ball traveling with velocity %d" % ball.velocity
+                print "Player 1 hit ball traveling with velocity %.3f" % ball.velocity
             elif player.velocity < 0 and ball.velocity >= 0 and bseq >= pseq:
                 self.actions.pop("flashing_ball", None) # remove animation from dict
                 self.outqueue.put(("game_hit_ball", { "player_num": 2 }))
@@ -254,7 +267,7 @@ class TennisShow(Show):
 
             # if there's nothing left to animate, resume normal flow
             if not any_active:
-                del self.actions[name]
+                if name: del self.actions[name]
                 on_complete()
 
         return on_event
@@ -284,8 +297,8 @@ class TennisShow(Show):
 
         # what to do after showing red animation
         def on_complete():
-            if player.score == 4:
-                self.actions["firework_show"] = self.firework_show
+            if player.score == TennisShow.POINTS_TO_WIN:
+                self.firework_show()
             else:
                 self.reset_rally()
 
@@ -293,10 +306,35 @@ class TennisShow(Show):
         animations = [ ScoreAnimation(p1=self.p1, p2=self.p2, color=player.color) ]
         self.actions["score"] = self.animate(animations, "score", on_complete)
 
+    FIREWORK_PROBABILITY = 23 # 1 in 23
+    # make new firework animations to show
+    def generate_fireworks(self, animations, color, n):
+        def gen(event): # curry -- maybe have players be able to interact?
+            if n == 0:
+                del self.actions["generate_fireworks"]
+                return
+
+            number_active = len(filter(lambda x: x.is_active, animations))
+
+            # generate a new firework with some probability, or if there are soon to be none
+            if random.randint(1, TennisShow.FIREWORK_PROBABILITY) == 1 or number_active <= 1:
+                animations.append(FireworkAnimation(color))
+                print "Spawning firework"
+                # I <3 recursion
+                self.actions["generate_fireworks"] = self.generate_fireworks(animations, color, n-1)
+        return gen
+
     # Show a show at the end for the winning player (eventually)
-    def firework_show(self, _):
+    def firework_show(self):
         print "Showing fireworks"
-        winning_player = 1 if self.players[1].score == 4 else 2 # decide which player won
-        self.outqueue.put(("game_over", { "player_num": winning_player }))
-        # TODO: Make a fun firework show at the end. Maybe design in Lumiverse??
-        self.running = False # just end the show for now
+        player_num = argmax(lambda i: self.players[i].score, [ 1, 2 ]) # player with highest score wins
+        winning_player = self.players[player_num]
+
+        self.outqueue.put(("game_over", { "player_num": player_num }))
+
+        color = winning_player.color
+        animations = [ FireworkAnimation(color) ]
+
+        # generate 20 fireworks
+        self.actions["generate_fireworks"] = self.generate_fireworks(animations, color, TennisShow.NUM_FIREWORKS)
+        self.actions["fireworks"] = self.animate(animations, "fireworks", self.reset)

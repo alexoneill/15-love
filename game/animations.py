@@ -5,6 +5,7 @@
 from __future__ import division
 from bridge import Bridge
 from colors import Colors
+import random
 
 BALL_PRIORITY = 3
 PLAYER_PRIORITY = 4
@@ -270,3 +271,43 @@ class Player(Animation):
             if abs(self.x - self.origin) > self.max_swing:
                 print "Player done swinging at %d" % self.x
                 self.is_active = False
+
+# firework show
+class FireworkBurst(Animation):
+    def init(self, priority):
+        self.is_active = True
+        self.priority = priority
+
+    def update(self):
+        self.x += self.velocity
+        if self.x > Bridge.SEQ_HI or self.x < Bridge.SEQ_LO:
+            self.is_active = False
+
+class FireworkAnimation(object):
+    MAX_VELOCITY = 6
+    MIN_VELOCITY = 2
+    FADE_FRAMES = 40
+    def __init__(self, color):
+        self.is_active = True # always active
+
+        color = Colors.fade(color, random.random())
+        seq = random.randint(Bridge.SEQ_LO, Bridge.SEQ_HI)
+        v = random.random() * (FireworkAnimation.MAX_VELOCITY - FireworkAnimation.MIN_VELOCITY)
+        v += FireworkAnimation.MIN_VELOCITY
+        p = random.randint(10, 100) # priority
+
+        # create two bursts going in opposite directions
+        self.animations = [
+            FireworkBurst(origin=seq, color=color, velocity=v, priority=p),
+            FireworkBurst(origin=seq, color=color, velocity=-v, priority=p),
+        ]
+
+    # delegate updating and rendering to underlying animations
+    def update(self):
+        for a in self.animations:
+            a.update()
+        self.is_active = any(map(lambda a: a.is_active, self.animations))
+
+    def render(self, bridge):
+        for a in self.animations:
+            a.render(bridge, 40)
