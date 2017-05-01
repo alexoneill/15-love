@@ -246,12 +246,12 @@ class TennisShow(Show):
             # hit ball if it has crossed where the player is swinging
             if player.velocity > 0 and ball.velocity <= 0 and bseq <= pseq:
                 self.actions.pop("flashing_ball", None) # remove animation from dict
-                self.outqueue.put(("game_hit_ball", { "player_num": 1 }))
+                self.outqueue.put(("game_hit_ball", { "player_num": 1, "strength": self.p1.strength }))
                 ball.hit(self.p1)
                 print "Player 1 hit ball traveling with velocity %.3f" % ball.velocity
             elif player.velocity < 0 and ball.velocity >= 0 and bseq >= pseq:
                 self.actions.pop("flashing_ball", None) # remove animation from dict
-                self.outqueue.put(("game_hit_ball", { "player_num": 2 }))
+                self.outqueue.put(("game_hit_ball", { "player_num": 2, "strength": self.p2.strength }))
                 ball.hit(self.p2)
                 print "Player 2 hit ball traveling with velocity %.3f" % ball.velocity
 
