@@ -181,6 +181,7 @@ class SocketRacket(racket.Racket):
     self._ev_disp.on('game_hit_ball', self.on_sio_game_hit_ball)
     self._ev_disp.on('game_won_rally', self.on_sio_game_won_rally)
     self._ev_disp.on('game_over', self.on_sio_game_over)
+    self._ev_disp.on('game_restart', self.on_sio_game_restart)
 
     print 'socketio: init'
 
@@ -422,7 +423,30 @@ class SocketRacket(racket.Racket):
           ]
       }
 
+  def on_sio_game_restart(self):
+    # Callback for when the game ends
+    print 'socketio: game_restart'
+
+    # Disable swings
+    self.enable_swings = False
+
+    # Restart the state machine
+    self.state = GameState.COLOR_SELECTION
+
+    # Parameterize the transition with animations
+    self.state_data = {
+        'events': [
+            (event.Event(SocketRacket.COLOR_TRANS_TIME,
+                self.generic_color_trans(None, SocketRacket.COLOR_CLEAR)), None)
+            (clear_event.ClearEvent(clear_color = True), color),
+          ]
+      }
+
   ########################### socketio Emits ###################################
+
+  def sio_game_reset(self):
+    # Method to communicate the color choice
+    self._ev_send.put(('game_reset', ))
 
   def sio_init_color_choice(self, color):
     # Method to communicate the color choice
@@ -463,6 +487,11 @@ class SocketRacket(racket.Racket):
 
   def on_button(self, controller, buttons):
     # Method to parse button presses
+
+    # Forceful reset
+    if((psmoveapi.Button.SELECT in buttons)
+        and (psmoveapi.Button.START in buttons)):
+      self.sio_game_reset()
 
     # Color choosing logic
     if(self.state == GameState.COLOR_SELECTION):
