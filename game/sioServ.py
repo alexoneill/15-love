@@ -1,3 +1,5 @@
+#!/usr/bin/python2
+
 import socketio
 import eventlet
 import eventlet.wsgi
