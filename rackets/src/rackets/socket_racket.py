@@ -151,6 +151,7 @@ class SocketRacket(racket.Racket):
   WON_RALLY_TIME     = 1.0
   LOST_RALLY_TIME    = 1.0
   OVER_TIME          = 5.0
+  RESET_TIME         = 0.5
 
   def __init__(self, sio_host, sio_port, player_num):
     super(SocketRacket, self).__init__()
@@ -436,11 +437,11 @@ class SocketRacket(racket.Racket):
     # Parameterize the transition with animations
     self.state_data = {
         'events': [
-            (event.Event(SocketRacket.OVER_TIME,
+            (event.Event(SocketRacket.RESET_TIME,
                 self.generic_flash(color = False)), None),
             (event.Event(SocketRacket.COLOR_TRANS_TIME,
                 self.generic_color_trans(None, SocketRacket.COLOR_CLEAR)), None)
-            (clear_event.ClearEvent(clear_color = True), color),
+            (clear_event.ClearEvent(), None),
           ]
       }
 
