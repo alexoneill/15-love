@@ -340,5 +340,6 @@ class TennisShow(Show):
         animations = [ FireworkAnimation(color) ]
 
         # generate 20 fireworks
+        del self.animations["end_bridge"]
         self.actions["generate_fireworks"] = self.generate_fireworks(animations, color, TennisShow.NUM_FIREWORKS)
         self.actions["fireworks"] = self.animate(animations, "fireworks", self.reset)
