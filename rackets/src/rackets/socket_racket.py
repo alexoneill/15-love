@@ -2,8 +2,6 @@
 # aoneill - 04/28/17
 
 import math
-import mock
-import random
 
 import socket
 import threading
@@ -463,38 +461,6 @@ class SocketRacket(racket.Racket):
 
   def on_button(self, controller, buttons):
     # Method to parse button presses
-
-    # Temporary to cycle through animations
-    # Pressing the PS button simulates an in-order server event
-    if(psmoveapi.Button.PS in buttons):
-      if(self.state == GameState.COLOR_WAIT):
-        if(bool(random.randint(0, 1))):
-          self.on_sio_init_color_reject()
-        else:
-          self.on_sio_init_color_confirm()
-
-      elif(self.state == GameState.START_WAIT):
-        self.on_sio_game_is_server()
-
-      elif(self.state == GameState.GAMEPLAY):
-        end_rally = False
-
-        if(bool(random.randint(0, 3))):
-          self.on_sio_game_hit_ball({'strength': 0.75})
-          if(not bool(random.randint(0, 5))):
-            self.on_sio_game_won_rally()
-            end_rally = True
-        else:
-          self.on_sio_game_missed_ball()
-          end_rally = True
-
-        if(end_rally and not bool(random.randint(0, 5))):
-          if(bool(random.randint(0, 1))):
-            self.on_sio_game_over({'is_winner': False})
-          else:
-            self.on_sio_game_over({'is_winner': True})
-
-      return
 
     # Color choosing logic
     if(self.state == GameState.COLOR_SELECTION):
