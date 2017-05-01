@@ -100,7 +100,8 @@ class TennisShow(Show):
     *******************************************************"""
     def reset(self, **kwargs):
         print "Restarting game"
-        self.outqueue.put(("game_restart"))
+        self.outqueue.put(("game_restart", { "player_num": 1 }))
+        self.outqueue.put(("game_restart", { "player_num": 2 }))
         self.init() # just call the init function again
 
     def reset_rally(self):
@@ -162,7 +163,8 @@ class TennisShow(Show):
             if p1.color != None and p2.color != None and p1_animation.fade_level == 0:
                 # start the game loop
                 del self.actions["flash_players"]
-                self.outqueue.put(("game_start"))
+                self.outqueue.put(("game_start", { "player_num": 1 }))
+                self.outqueue.put(("game_start", { "player_num": 2 }))
                 self.reset_rally()
 
         # delegate to flash_players
