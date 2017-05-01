@@ -121,6 +121,7 @@ class TennisShow(Show):
         # get ball ready to be served
         ball = self.ball
         ball.is_active = True
+        ball.counter = 1.0 # reset speed multiplier
         ball.velocity = 0
         if serving_player == 1:
             ball.x = self.p1.origin + self.p1.max_swing - 3
@@ -226,6 +227,7 @@ class TennisShow(Show):
                 print "Player swing too weak (%.3f <= %.3f)" % (data["strength"], TennisShow.STRENGTH_THRESHOLD)
                 return
             player.set_strength(data["strength"])
+            player.hand = data["hand"]
             player.swing()
             ball = self.ball
             # serve if it is your turn to serve
@@ -249,15 +251,15 @@ class TennisShow(Show):
 
             # hit ball if it has crossed where the player is swinging
             if player.velocity > 0 and ball.velocity <= 0 and bseq <= pseq:
-                print "Player 1 hit ball"
                 self.actions.pop("flashing_ball", None) # remove animation from dict
                 self.outqueue.put(("game_hit_ball", { "player_num": 1, "strength": self.p1.strength }))
-                ball.hit(self.p1)
+                ball.hit(self.p1, self.p2.color)
+                print "Player 1 hit ball at %.3f" % ball.velocity
             elif player.velocity < 0 and ball.velocity >= 0 and bseq >= pseq:
-                print "Player 2 hit ball"
                 self.actions.pop("flashing_ball", None) # remove animation from dict
                 self.outqueue.put(("game_hit_ball", { "player_num": 2, "strength": self.p2.strength }))
-                ball.hit(self.p2)
+                ball.hit(self.p2, self.p1.color)
+                print "Player 2 hit ball at %.3f" % ball.velocity
 
     # show several animations at once
     def animate(self, animations, name=None, on_complete=lambda: None):

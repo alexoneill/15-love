@@ -240,13 +240,16 @@ class ScoreAnimation(object):
 
 # Class that represents ball state, including velocity and location
 class Ball(Animation):
-    INCREASE = 1.05 # multiplicative increase of ball speed
+    INCREASE = 1.03 # multiplicative increase of ball speed
+    BACKHAND_MULTIPLIER = 1.25 # speed boost to backhand ball
+    BACKHAND_PROBABILITY = 10 # inverse of probability of a backhand round
     # max_seq is the furthest sequence the ball is allowed to go to
     def init(self, max_seq):
         self.max_seq = max_seq
         self.starting_velocity = self.velocity
         self.priority = BALL_PRIORITY
         self.counter = 1.0
+        self.backhand = False
 
     def update(self, show):
         if self.is_active:
@@ -261,20 +264,35 @@ class Ball(Animation):
                 # make the show perform the actions it does when a player misses
                 show.on_missed_ball(awarded_player)
 
-    def hit(self, player):
+    def hit(self, player, other_color):
         # change direction when hit
         if self.velocity == 0:
             self.velocity = self.starting_velocity * sign(player.velocity) * player.strength
         else:
             self.counter *= Ball.INCREASE
             self.velocity = self.counter * sign(player.velocity) * self.starting_velocity * player.strength
+            if self.backhand and player.hand != player.handedness: # use wrong hand
+                print "Backhand rally returned backhand"
+                self.color = Colors.WHITE # set white to indicate backhand successful
+                self.velocity *= Ball.BACKHAND_MULTIPLIER
+            elif self.backhand:
+                print "Backhand rally returned forehand"
+                self.backhand = False
+                self.color = Colors.YELLOW # switch back to normal round
 
+        print self.velocity
 
+        # go into backhand mode with some probability
+        if not self.backhand and random.randint(1, Ball.BACKHAND_PROBABILITY) == 1:
+            print "Starting backhand rally"
+            self.backhand = True
+            self.color = other_color # set color to other player's color
 
 # Class that represents where the player's state, including swing location
 class Player(Animation):
     def init(self, max_swing):
         self.score = 0
+        self.handedness = 1 # right handed
         self.max_swing = max_swing # number of panels the swing spans
         self.serving = False
         self.priority = PLAYER_PRIORITY
