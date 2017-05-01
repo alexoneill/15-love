@@ -436,6 +436,8 @@ class SocketRacket(racket.Racket):
     # Parameterize the transition with animations
     self.state_data = {
         'events': [
+            (event.Event(SocketRacket.OVER_TIME,
+                self.generic_flash(color = False)), None),
             (event.Event(SocketRacket.COLOR_TRANS_TIME,
                 self.generic_color_trans(None, SocketRacket.COLOR_CLEAR)), None)
             (clear_event.ClearEvent(clear_color = True), color),
@@ -446,7 +448,7 @@ class SocketRacket(racket.Racket):
 
   def sio_game_reset(self):
     # Method to communicate the color choice
-    self._ev_send.put(('game_reset', ))
+    self._ev_send.put(('game_reset', {}))
 
   def sio_init_color_choice(self, color):
     # Method to communicate the color choice
