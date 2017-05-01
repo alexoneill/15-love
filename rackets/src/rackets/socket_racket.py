@@ -423,7 +423,7 @@ class SocketRacket(racket.Racket):
           ]
       }
 
-  def on_sio_game_restart(self):
+  def on_sio_game_restart(self, data):
     # Callback for when the game ends
     print 'socketio: game_restart'
 
