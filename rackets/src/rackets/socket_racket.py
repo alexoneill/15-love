@@ -396,14 +396,14 @@ class SocketRacket(racket.Racket):
     print 'socketio: game_over'
 
     # Parse parameters
-    is_winner = data['is_winner']
+    winner = data['winner']
 
     # Disable swings
     self.enable_swings = False
 
     # Chose which color and which end-state
     color = SocketRacket.COLOR_WIN
-    if(is_winner):
+    if(self.player_num == winner):
       self.state = GameState.END_GAME_WIN
     else:
       color = SocketRacket.COLOR_LOSE
