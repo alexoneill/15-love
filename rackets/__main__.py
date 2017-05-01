@@ -5,7 +5,7 @@ import os
 import socket
 import sys
 
-from src.rackets import sio_racket
+from src.rackets import socket_racket
 
 # Main method when running the racket driver code
 def main(player = '1'):
@@ -16,11 +16,11 @@ def main(player = '1'):
 
   # Get server parameters
   ip = os.environ['PB_15LOVE_IP']
-  port = os.environ['PB_15LOVE_PORT']
+  port = int(os.environ['PB_15LOVE_PORT'])
   player = int(player)
 
   # Get a text-based racket and constantly update it
-  sracket = sio_racket.SIORacket(ip, port, player)
+  sracket = socket_racket.SocketRacket(ip, port, player)
   while(True):
     sracket.update()
 
