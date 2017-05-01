@@ -87,15 +87,6 @@ class SIORacket(racket.Racket):
     # socketio config
     self._sio = sio.SocketIO(self.sio_host, self.sio_port)
 
-    # # TODO: Remove this in favor of the above
-    # self._sio = type('', (), {})
-    # def print2(*args):
-    #   print 'socketio:', args
-
-    # # TODO: Here too
-    # self._sio.on = mock.Mock(side_effect = print2)
-    # self._sio.emit = mock.Mock(side_effect = print2)
-
     # socketio callbacks
     # Basic
     self._sio.on('connect', self.on_sio_connect)
