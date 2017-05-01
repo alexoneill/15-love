@@ -29,6 +29,19 @@ class GameState(object):
   END_GAME_LOST = 9
 
 
+
+def filter_player(func):
+  def inner(self, data):
+    if(('player_num' in data) and (data['player_num'] == self.player_num)):
+      del data['player_num']
+      if(len(data) > 0):
+        func(self, data)
+      else:
+        func(self)
+
+  return inner
+
+
 class SIORacket(racket.Racket):
   '''
   socketio-based racket for gameplay.
@@ -72,16 +85,16 @@ class SIORacket(racket.Racket):
     self.player_num = player_num
 
     # socketio config
-    # self._sio = sio.socketio(self.sio_host, self.sio_port)
+    self._sio = sio.SocketIO(self.sio_host, self.sio_port)
 
-    # TODO: Remove this in favor of the above
-    self._sio = type('', (), {})
-    def print2(*args):
-      print 'socketio:', args
+    # # TODO: Remove this in favor of the above
+    # self._sio = type('', (), {})
+    # def print2(*args):
+    #   print 'socketio:', args
 
-    # TODO: Here too
-    self._sio.on = mock.Mock(side_effect = print2)
-    self._sio.emit = mock.Mock(side_effect = print2)
+    # # TODO: Here too
+    # self._sio.on = mock.Mock(side_effect = print2)
+    # self._sio.emit = mock.Mock(side_effect = print2)
 
     # socketio callbacks
     # Basic
@@ -182,6 +195,7 @@ class SIORacket(racket.Racket):
 
   ######################### socketio Listeners #################################
 
+  # @filter_player
   def on_sio_init_color_confirm(self):
     # Callback for a color confirmation event
     print 'socketio: init_color_confirm'
@@ -199,6 +213,7 @@ class SIORacket(racket.Racket):
           ]
       }
 
+  # @filter_player
   def on_sio_init_color_reject(self):
     # Callback for a color rejection event
     print 'socketio: init_color_reject'
@@ -220,6 +235,7 @@ class SIORacket(racket.Racket):
           ]
       }
 
+  # @filter_player
   def on_sio_game_is_server(self):
     # Callback for when the player becomes the person serving the ball
     print 'socketio: game_is_server'
@@ -237,6 +253,7 @@ class SIORacket(racket.Racket):
           ]
       }
 
+  # @filter_player
   def on_sio_game_missed_ball(self):
     # Callback for a missed ball event
     print 'socketio: game_missed_ball'
@@ -258,6 +275,7 @@ class SIORacket(racket.Racket):
           ]
       }
 
+  # @filter_player
   def on_sio_game_hit_ball(self, data):
     # Callback for a hit ball event
     print 'socketio: game_hit_ball'
@@ -278,6 +296,7 @@ class SIORacket(racket.Racket):
           ]
       }
 
+  # @filter_player
   def on_sio_game_won_rally(self):
     # Callback for when a player wins the rally
     print 'socketio: game_won_rally'
@@ -299,6 +318,7 @@ class SIORacket(racket.Racket):
           ]
       }
 
+  # @filter_player
   def on_sio_game_over(self, data):
     # Callback for when the game ends
     print 'socketio: game_over'
@@ -335,8 +355,8 @@ class SIORacket(racket.Racket):
   def sio_init_color_choice(self, color):
     # Method to communicate the color choice
     self._sio.emit('init_color_choice', {
+        'player_num': self.player_num,
         'color': color,
-        'player': self.player_num
       })
 
   def sio_game_swing(self, hand, strength):
