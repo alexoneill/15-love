@@ -246,6 +246,7 @@ class Ball(Animation):
         self.max_seq = max_seq
         self.starting_velocity = self.velocity
         self.priority = BALL_PRIORITY
+        self.counter = 1.0
 
     def update(self, show):
         if self.is_active:
@@ -265,7 +266,8 @@ class Ball(Animation):
         if self.velocity == 0:
             self.velocity = self.starting_velocity * sign(player.velocity) * player.strength
         else:
-            self.velocity = -self.velocity * Ball.INCREASE * player.strength
+            self.counter *= Ball.INCREASE
+            self.velocity = self.counter * sign(player.velocity) * self.starting_velocity * player.strength
 
 # Class that represents where the player's state, including swing location
 class Player(Animation):

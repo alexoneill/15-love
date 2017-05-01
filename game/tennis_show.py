@@ -122,10 +122,10 @@ class TennisShow(Show):
         ball.is_active = True
         ball.velocity = 0
         if serving_player == 1:
-            ball.x = self.p1.origin + self.p1.max_swing
+            ball.x = self.p1.origin + self.p1.max_swing - 2
             lo, hi = ball.x - 2, ball.x
         else:
-            ball.x = self.p2.origin - self.p2.max_swing
+            ball.x = self.p2.origin - self.p2.max_swing + 2
             lo, hi = ball.x, ball.x + 2
 
         # show flashing ball animation
@@ -163,8 +163,6 @@ class TennisShow(Show):
             if p1.color != None and p2.color != None and p1_animation.fade_level == 0:
                 # start the game loop
                 del self.actions["flash_players"]
-                self.outqueue.put(("game_start", { "player_num": 1 }))
-                self.outqueue.put(("game_start", { "player_num": 2 }))
                 self.reset_rally()
 
         # delegate to flash_players
@@ -226,6 +224,7 @@ class TennisShow(Show):
             ball = self.ball
             # serve if it is your turn to serve
             if player.serving and ball.velocity == 0:
+                print "Player served %d" % self.ball.get_seq()
                 opponent.serving = True
                 player.serving = False
 
@@ -245,15 +244,15 @@ class TennisShow(Show):
 
             # hit ball if it has crossed where the player is swinging
             if player.velocity > 0 and ball.velocity <= 0 and bseq <= pseq:
+                print "Player 1 hit ball"
                 self.actions.pop("flashing_ball", None) # remove animation from dict
                 self.outqueue.put(("game_hit_ball", { "player_num": 1, "strength": self.p1.strength }))
                 ball.hit(self.p1)
-                print "Player 1 hit ball traveling with velocity %.3f" % ball.velocity
             elif player.velocity < 0 and ball.velocity >= 0 and bseq >= pseq:
+                print "Player 2 hit ball"
                 self.actions.pop("flashing_ball", None) # remove animation from dict
                 self.outqueue.put(("game_hit_ball", { "player_num": 2, "strength": self.p2.strength }))
                 ball.hit(self.p2)
-                print "Player 2 hit ball traveling with velocity %.3f" % ball.velocity
 
     # show several animations at once
     def animate(self, animations, name=None, on_complete=lambda: None):
@@ -336,12 +335,13 @@ class TennisShow(Show):
         player_num = argmax(lambda i: self.players[i].score, [ 1, 2 ]) # player with highest score wins
         winning_player = self.players[player_num]
 
-        self.outqueue.put(("game_over", { "player_num": player_num }))
+        self.outqueue.put(("game_over", { "player_num": 1, "winner": player_num }))
+        self.outqueue.put(("game_over", { "player_num": 2, "winner": player_num }))
 
         color = winning_player.color
         animations = [ FireworkAnimation(color) ]
 
         # generate 20 fireworks
-        del self.animations["end_bridge"]
+        del self.actions["end_bridge"]
         self.actions["generate_fireworks"] = self.generate_fireworks(animations, color, TennisShow.NUM_FIREWORKS)
         self.actions["fireworks"] = self.animate(animations, "fireworks", self.reset)

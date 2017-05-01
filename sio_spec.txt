@@ -18,12 +18,14 @@ game_hit_ball: dict
 game_is_server: dict
   - player_num: int
 
-game_start: None
+game_start: dict
+- player_num: int
 
 game_over: dict
   - player_num: int
 
-game_restart: None
+game_restart: dict
+  - player_num: int
 
 Racket - Emit
 =============
