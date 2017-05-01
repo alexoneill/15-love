@@ -2,6 +2,7 @@
 # aoneill - 04/28/17
 
 import math
+import functools
 
 import socket
 import threading
@@ -33,6 +34,7 @@ class GameState(object):
 
 
 def filter_player(func):
+  @functools.wraps(func)
   def inner(self, data):
     if(('player_num' in data) and (data['player_num'] == self.player_num)):
       del data['player_num']
