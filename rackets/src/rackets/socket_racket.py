@@ -20,17 +20,17 @@ class GameState(object):
   '''
   Game states for the controller.
   '''
-  COLOR_SELECTION = 0
-  COLOR_WAIT = 1
-  START_WAIT = 2
-  SERVER = 3
-  GAMEPLAY = 4
-  HIT_BALL = 5
-  WON_RALLY = 6
-  LOST_RALLY = 7
-  END_GAME_WIN = 8
-  END_GAME_LOST = 9
-
+  RESET_WAIT = 0
+  COLOR_SELECTION = 1
+  COLOR_WAIT = 2
+  START_WAIT = 3
+  SERVER = 4
+  GAMEPLAY = 5
+  HIT_BALL = 6
+  WON_RALLY = 7
+  LOST_RALLY = 8
+  END_GAME_WIN = 9
+  END_GAME_LOST = 10
 
 
 def filter_player(func):
@@ -488,13 +488,15 @@ class SocketRacket(racket.Racket):
 
   ############################# Button Events ##################################
 
-  def on_button(self, controller, buttons):
+  def on_button(self, controller, pressed, held, released):
     # Method to parse button presses
 
     # Forceful reset
-    if((psmoveapi.Button.SELECT in buttons)
-        and (psmoveapi.Button.START in buttons)):
+    if((self.state != GameState.RESET_WAIT)
+        and (psmoveapi.Button.SELECT in held)
+        and (psmoveapi.Button.START in held)):
       self.sio_game_reset()
+      self.state = GameState.RESET_WAIT
 
     # Color choosing logic
     if(self.state == GameState.COLOR_SELECTION):
@@ -503,13 +505,13 @@ class SocketRacket(racket.Racket):
 
       # Cycle through button options
       for button in choices:
-        if(button in buttons):
+        if(button in pressed):
           self.color_choice = SocketRacket.COLORS[button]
           controller.color = psmoveapi.RGB(*self.color_choice)
           return
 
       # Color confirmation logic
-      if((self.color_choice is not None) and (psmoveapi.Button.MOVE in buttons)):
+      if((self.color_choice is not None) and (psmoveapi.Button.MOVE in pressed)):
         self.sio_init_color_choice(self.color_choice)
 
         # Signal a transition to the next state

@@ -100,16 +100,30 @@ class Racket(psmoveapi.PSMoveAPI):
 
   def _get_button(self, controller):
     # See which buttons are pressed
-    buttons = set([])
-    for button in (psmoveapi.Button.TRIANGLE, psmoveapi.Button.CIRCLE,
+    buttons = (psmoveapi.Button.TRIANGLE, psmoveapi.Button.CIRCLE,
         psmoveapi.Button.CROSS, psmoveapi.Button.SQUARE,
         psmoveapi.Button.SELECT, psmoveapi.Button.START,
-        psmoveapi.Button.PS, psmoveapi.Button.MOVE):
+        psmoveapi.Button.PS, psmoveapi.Button.MOVE)
+
+    pressed = set()
+    held = set()
+    released = set()
+
+    for button in buttons:
       if(controller.now_pressed(button)):
-        buttons.add(button)
+        pressed.add(button)
+
+      if(controller.still_pressed(button)):
+        held.add(button)
+
+      if(controller.now_released(button)):
+        released.add(button)
 
     # Give the collection of buttons
-    return (buttons if(buttons) else None)
+    if(pressed | held | released):
+      return (pressed, held, released)
+
+    return None
 
   def on_connect(self, controller):
     # Call our callback if defined
@@ -127,7 +141,7 @@ class Racket(psmoveapi.PSMoveAPI):
     # Create a button event
     buttons = self._get_button(controller)
     if(buttons is not None):
-      self._optional_callback('on_button', controller, buttons)
+      self._optional_callback('on_button', controller, *buttons)
 
     # Call our callback if defined
     enable = self._optional_callback('on_refresh', controller, self._state)
