@@ -440,8 +440,8 @@ class SocketRacket(racket.Racket):
             (event.Event(SocketRacket.RESET_TIME,
                 self.generic_flash(color = False)), None),
             (event.Event(SocketRacket.COLOR_TRANS_TIME,
-                self.generic_color_trans(None, SocketRacket.COLOR_CLEAR)), None)
-            (clear_event.ClearEvent(), None),
+                self.generic_color_trans(None, SocketRacket.COLOR_CLEAR)), None),
+            (clear_event.ClearEvent(), None)
           ]
       }
 
