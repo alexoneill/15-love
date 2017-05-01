@@ -34,6 +34,7 @@ class TennisShow(Show):
 
     NUM_FIREWORKS = 20 # number of fireworks to show at the end
     POINTS_TO_WIN = 4 # number of points to win
+    STRENGTH_THRESHOLD = 0.2 # threshold under which to not count the swing
 
     def init(self):
         # offset of start panel for player 1 and player 2
@@ -122,11 +123,13 @@ class TennisShow(Show):
         ball.is_active = True
         ball.velocity = 0
         if serving_player == 1:
-            ball.x = self.p1.origin + self.p1.max_swing - 2
-            lo, hi = ball.x - 2, ball.x
+            ball.x = self.p1.origin + self.p1.max_swing - 3
+            lo, hi = ball.x - 3, ball.x
+            print "Ball spans [%d, %d]" % (lo, hi)
         else:
-            ball.x = self.p2.origin - self.p2.max_swing + 2
-            lo, hi = ball.x, ball.x + 2
+            ball.x = self.p2.origin - self.p2.max_swing + 3
+            lo, hi = ball.x, ball.x + 3
+            print "Ball spans [%d, %d]" % (lo, hi)
 
         # show flashing ball animation
         animations = [ PulseAnimation(start=lo, end=hi, color=ball.color) ]
@@ -219,12 +222,14 @@ class TennisShow(Show):
     # swing event received
     def swing(self, data):
         def player_swing(player, opponent):
-            player.swing()
+            if data["strength"] <= TennisShow.STRENGTH_THRESHOLD:
+                print "Player swing too weak (%.3f <= %.3f)" % (data["strength"], TennisShow.STRENGTH_THRESHOLD)
+                return
             player.set_strength(data["strength"])
+            player.swing()
             ball = self.ball
             # serve if it is your turn to serve
             if player.serving and ball.velocity == 0:
-                print "Player served %d" % self.ball.get_seq()
                 opponent.serving = True
                 player.serving = False
 
