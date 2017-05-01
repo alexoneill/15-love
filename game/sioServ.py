@@ -20,7 +20,7 @@ sio_spec.txt'''
 # Define server and queues
 sio = socketio.Server()
 app = Flask(__name__)
-inqueue = Queue()
+inqueue = Queue.Queue()
 
 ###############################################################################
 # Emit wrappers, to be called in the game to send events
@@ -70,5 +70,5 @@ if __name__ == '__main__':
     app = socketio.Middleware(sio, app)
 
     # deploy as an eventlet WSGI server
-    eventlet.wsgi.server(eventlet.listen(('localhost', 8000)), app)
+    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', 8000)), app)
     show.run(framerate=40)
