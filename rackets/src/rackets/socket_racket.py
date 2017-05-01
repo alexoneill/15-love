@@ -476,20 +476,20 @@ class SocketRacket(racket.Racket):
           controller.color = psmoveapi.RGB(*self.color_choice)
           return
 
-    # Color confirmation logic
-    if((self.color_choice is not None) and (psmoveapi.Button.MOVE in buttons)):
-      self.sio_init_color_choice(self.color_choice)
+      # Color confirmation logic
+      if((self.color_choice is not None) and (psmoveapi.Button.MOVE in buttons)):
+        self.sio_init_color_choice(self.color_choice)
 
-      # Signal a transition to the next state
-      self.state = GameState.COLOR_WAIT
-      self.state_data = {
-          'events': [
-              (event.Event(SocketRacket.COLOR_WAIT_TIME,
-                  self.generic_flash(rumble_scale = 0.75,
-                      color_scale = 0.75)), None),
-              (clear_event.ClearEvent(), None)
-            ]
-        }
+        # Signal a transition to the next state
+        self.state = GameState.COLOR_WAIT
+        self.state_data = {
+            'events': [
+                (event.Event(SocketRacket.COLOR_WAIT_TIME,
+                    self.generic_flash(rumble_scale = 0.75,
+                        color_scale = 0.75)), None),
+                (clear_event.ClearEvent(), None)
+              ]
+          }
 
   ######################### Housekeeping Events ################################
 
