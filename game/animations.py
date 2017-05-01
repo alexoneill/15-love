@@ -53,10 +53,15 @@ class Animation(object):
 
 # Bars for displaying score to each other
 class ScoreBars(Animation):
+    FADE_FRAMES = 80 # how long to hang at the end
+    FLASH_CYCLE = 20 # how long to fade in and out
+
     def init(self, end_seq):
         self.end_x = end_seq
         self.is_active = True
         self.priority = SCORE_PRIORITY
+        self.flashing = False
+        self.start_color = self.color
 
     def update(self):
         self.x += self.velocity
@@ -66,13 +71,20 @@ class ScoreBars(Animation):
          or (self.velocity > 0 and self.x >= self.end_x)):
             self.x = self.end_x
             self.velocity = 0
-            self.frames_till_end = 80 # frames to hang suspended
+            self.frames_till_end = ScoreBars.FADE_FRAMES
 
         # run until dead
         if self.velocity == 0:
             # die
             if self.frames_till_end == 0:
                 self.is_active = False
+
+            if self.flashing:
+                adj = self.frames_till_end % ScoreBars.FLASH_CYCLE
+                scale = abs(adj - ScoreBars.FLASH_CYCLE / 2)
+                # shift back up by FLASH_CYCLE since we scaled down in the previous step
+                frac = ScoreBars.FLASH_CYCLE + scale / ScoreBars.FLASH_CYCLE
+                self.color = Colors.fade(self.start_color, frac)
 
             self.frames_till_end -= 1
 
@@ -133,10 +145,11 @@ class ScoreAnimation(object):
     VELOCITY = 4 # sequences per frame for score bars
     FADE_FRAMES = 10 # how long it takes to fade
 
-    def __init__(self, p1, p2, color):
+    def __init__(self, p1, p2, color, awarded_player):
         self.p1 = p1
         self.p2 = p2
         self.color = color
+        self.awarded_player = awarded_player # player number
 
         # start animation immediately
         self.state = "pulse" # pulse is where we make the whole bridge the same color
@@ -163,6 +176,12 @@ class ScoreAnimation(object):
             # origin is +/- 1 so both the p1 and p2 scores display
             s1 = ScoreBars(origin=hi-1, end_seq=p1_offset, color=self.p1.color, velocity=-v)
             s2 = ScoreBars(origin=lo+1, end_seq=p2_offset, color=self.p1.color, velocity=v)
+
+            # make most recently-earned point flash
+            if self.awarded_player == 1 and i == 0:
+                s1.flashing = True
+                s2.flashing = True
+
             animations.append(s1)
             animations.append(s2)
             p1_offset += ScoreAnimation.SEPARATION
@@ -172,6 +191,12 @@ class ScoreAnimation(object):
         for i in xrange(0, self.p2.score):
             s1 = ScoreBars(origin=hi, end_seq=p1_offset, color=self.p2.color, velocity=-v)
             s2 = ScoreBars(origin=lo, end_seq=p2_offset, color=self.p2.color, velocity=v)
+
+            # make most recently-earned point flash
+            if self.awarded_player == 2 and i == 0:
+                s1.flashing = True
+                s2.flashing = True
+
             animations.append(s1)
             animations.append(s2)
             p1_offset += ScoreAnimation.SEPARATION

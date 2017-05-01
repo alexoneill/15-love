@@ -303,7 +303,11 @@ class TennisShow(Show):
                 self.reset_rally()
 
         # Engulf entire bridge in red after a missed point
-        animations = [ ScoreAnimation(p1=self.p1, p2=self.p2, color=player.color) ]
+        kwargs = { "p1": self.p1,
+                   "p2": self.p2,
+                   "color": player.color,
+                   "awarded_player": awarded_player }
+        animations = [ ScoreAnimation(**kwargs) ]
         self.actions["score"] = self.animate(animations, "score", on_complete)
 
     FIREWORK_PROBABILITY = 23 # 1 in 23
