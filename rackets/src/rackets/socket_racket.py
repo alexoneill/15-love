@@ -86,11 +86,11 @@ class EventDispatcher(threading.Thread):
   def run(self):
     while(True):
       (id_str, data) = self._listener.get(blocking = True)
-      print 'wooo'
-      func = self._events[id_str]
+      if(id_str in self._events):
+        func = self._events[id_str]
 
-      print 'EventDispatcher:', (func.__name__, data)
-      func(data)
+        print 'EventDispatcher:', (func.__name__, data)
+        func(data)
 
 
 class EventSender(threading.Thread):
