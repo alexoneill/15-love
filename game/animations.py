@@ -141,7 +141,7 @@ class PulseAnimation(object):
 class ScoreAnimation(object):
 
     # distance between consecutive score panels
-    SEPARATION = 3 # sequences
+    SEPARATION = 2 # sequences
     VELOCITY = 4 # sequences per frame for score bars
     FADE_FRAMES = 10 # how long it takes to fade
 
@@ -164,7 +164,7 @@ class ScoreAnimation(object):
         animations = []
         p1, p2 = self.p1, self.p2
         p1_offset = p1.origin + p1.max_swing - 6 * ScoreAnimation.SEPARATION
-        p2_offset = p2.origin - p2.max_swing - 6 * ScoreAnimation.SEPARATION
+        p2_offset = p2.origin - p2.max_swing + 6 * ScoreAnimation.SEPARATION
 
         # constants used when creating animations
         v = ScoreAnimation.VELOCITY
