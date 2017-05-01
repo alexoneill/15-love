@@ -53,8 +53,8 @@ class Animation(object):
 
 # Bars for displaying score to each other
 class ScoreBars(Animation):
-    FADE_FRAMES = 80 # how long to hang at the end
-    FLASH_CYCLE = 20 # how long to fade in and out
+    FADE_FRAMES = 120 # how long to hang at the end
+    FLASH_CYCLE = 40 # how long to fade in and out
 
     def init(self, end_seq):
         self.end_x = end_seq
@@ -82,8 +82,8 @@ class ScoreBars(Animation):
             if self.flashing:
                 adj = self.frames_till_end % ScoreBars.FLASH_CYCLE
                 scale = abs(adj - ScoreBars.FLASH_CYCLE / 2)
-                # shift back up by FLASH_CYCLE since we scaled down in the previous step
-                frac = ScoreBars.FLASH_CYCLE + scale / ScoreBars.FLASH_CYCLE
+                # shift back up by a factor of 2 since we scaled down in the previous step
+                frac = 2 * scale / ScoreBars.FLASH_CYCLE
                 self.color = Colors.fade(self.start_color, frac)
 
             self.frames_till_end -= 1
