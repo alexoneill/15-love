@@ -2,9 +2,12 @@
 # aoneill - 04/28/17
 
 import math
-import mock
-import random
-import socketIO_client as sio
+import functools
+
+import socket
+import threading
+import Queue
+import pickle
 
 from libs import psmoveapi
 
@@ -17,20 +20,21 @@ class GameState(object):
   '''
   Game states for the controller.
   '''
-  COLOR_SELECTION = 0
-  COLOR_WAIT = 1
-  START_WAIT = 2
-  SERVER = 3
-  GAMEPLAY = 4
-  HIT_BALL = 5
-  WON_RALLY = 6
-  LOST_RALLY = 7
-  END_GAME_WIN = 8
-  END_GAME_LOST = 9
-
+  RESET_WAIT = 0
+  COLOR_SELECTION = 1
+  COLOR_WAIT = 2
+  START_WAIT = 3
+  SERVER = 4
+  GAMEPLAY = 5
+  HIT_BALL = 6
+  WON_RALLY = 7
+  LOST_RALLY = 8
+  END_GAME_WIN = 9
+  END_GAME_LOST = 10
 
 
 def filter_player(func):
+  @functools.wraps(func)
   def inner(self, data):
     if(('player_num' in data) and (data['player_num'] == self.player_num)):
       del data['player_num']
@@ -42,7 +46,79 @@ def filter_player(func):
   return inner
 
 
-class SIORacket(racket.Racket):
+class EventListener(threading.Thread):
+  MSG_LEN = 4096
+
+  def __init__(self, sock):
+    super(EventListener, self).__init__()
+
+    self.sock = sock
+    self._queue = Queue.Queue()
+
+    self.start()
+
+  def has(self):
+    return (not self._queue.empty())
+
+  def get(self, blocking = False):
+    return self._queue.get(blocking)
+
+  def run(self):
+    while(True):
+      data = self.sock.recv(EventListener.MSG_LEN)
+      if(data == ''):
+        return
+
+      data = pickle.loads(data)
+      print 'EventListener:', data
+      self._queue.put(data)
+
+
+class EventDispatcher(threading.Thread):
+  def __init__(self, sock):
+    super(EventDispatcher, self).__init__()
+    self._listener = EventListener(sock)
+    self._events = {}
+
+    self.start()
+
+  def on(self, event, func):
+    self._events[event] = func
+
+  def run(self):
+    while(True):
+      (id_str, data) = self._listener.get(blocking = True)
+      if(id_str in self._events):
+        func = self._events[id_str]
+
+        print 'EventDispatcher:', (func.__name__, data)
+        func(data)
+
+
+class EventSender(threading.Thread):
+  MSG_LEN = 4096
+
+  def __init__(self, sock):
+    super(EventSender, self).__init__()
+
+    self.sock = sock
+    self._queue = Queue.Queue()
+
+    self.start()
+
+  def put(self, data):
+    return self._queue.put(data)
+
+  def run(self):
+    while(True):
+      data = self._queue.get(True)
+      print 'EventSender:', data
+
+      data = pickle.dumps(data)
+      self.sock.send(data)
+
+
+class SocketRacket(racket.Racket):
   '''
   socketio-based racket for gameplay.
 
@@ -75,9 +151,10 @@ class SIORacket(racket.Racket):
   WON_RALLY_TIME     = 1.0
   LOST_RALLY_TIME    = 1.0
   OVER_TIME          = 5.0
+  RESET_TIME         = 0.5
 
   def __init__(self, sio_host, sio_port, player_num):
-    super(SIORacket, self).__init__()
+    super(SocketRacket, self).__init__()
 
     # Save parameters
     self.sio_host = sio_host
@@ -85,21 +162,27 @@ class SIORacket(racket.Racket):
     self.player_num = player_num
 
     # socketio config
-    self._sio = sio.SocketIO(self.sio_host, self.sio_port)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((self.sio_host, self.sio_port))
+
+    # Get event helpers
+    self._ev_disp = EventDispatcher(sock)
+    self._ev_send = EventSender(sock)
 
     # socketio callbacks
     # Basic
-    self._sio.on('connect', self.on_sio_connect)
-    self._sio.on('disconnect', self.on_sio_disconnect)
+    self._ev_disp.on('connect', self.on_sio_connect)
+    self._ev_disp.on('disconnect', self.on_sio_disconnect)
 
     # Game-based - Listening
-    self._sio.on('init_color_reject', self.on_sio_init_color_reject)
-    self._sio.on('init_color_confirm', self.on_sio_init_color_confirm)
-    self._sio.on('game_is_server', self.on_sio_game_is_server)
-    self._sio.on('game_missed_ball', self.on_sio_game_missed_ball)
-    self._sio.on('game_hit_ball', self.on_sio_game_hit_ball)
-    self._sio.on('game_won_rally', self.on_sio_game_won_rally)
-    self._sio.on('game_over', self.on_sio_game_over)
+    self._ev_disp.on('init_color_reject', self.on_sio_init_color_reject)
+    self._ev_disp.on('init_color_confirm', self.on_sio_init_color_confirm)
+    self._ev_disp.on('game_is_server', self.on_sio_game_is_server)
+    self._ev_disp.on('game_missed_ball', self.on_sio_game_missed_ball)
+    self._ev_disp.on('game_hit_ball', self.on_sio_game_hit_ball)
+    self._ev_disp.on('game_won_rally', self.on_sio_game_won_rally)
+    self._ev_disp.on('game_over', self.on_sio_game_over)
+    self._ev_disp.on('game_restart', self.on_sio_game_restart)
 
     print 'socketio: init'
 
@@ -186,7 +269,7 @@ class SIORacket(racket.Racket):
 
   ######################### socketio Listeners #################################
 
-  # @filter_player
+  @filter_player
   def on_sio_init_color_confirm(self):
     # Callback for a color confirmation event
     print 'socketio: init_color_confirm'
@@ -198,13 +281,13 @@ class SIORacket(racket.Racket):
     self.state = GameState.START_WAIT
     self.state_data = {
         'events': [
-            (event.Event(SIORacket.COLOR_CONFIRM_TIME,
+            (event.Event(SocketRacket.COLOR_CONFIRM_TIME,
                 self.generic_flash(freq = 3, color_scale = 0.75)), None),
             (clear_event.ClearEvent(), None)
           ]
       }
 
-  # @filter_player
+  @filter_player
   def on_sio_init_color_reject(self):
     # Callback for a color rejection event
     print 'socketio: init_color_reject'
@@ -216,17 +299,17 @@ class SIORacket(racket.Racket):
     self.state = GameState.COLOR_SELECTION
     self.state_data = {
         'events': [
-            (event.Event(SIORacket.COLOR_TRANS_TIME,
-                self.generic_color_trans(None, SIORacket.COLOR_BAD)), None),
-            (event.Event(SIORacket.COLOR_REJECT_TIME,
-                self.generic_flash()), SIORacket.COLOR_BAD),
-            (clear_event.ClearEvent(clear_color = True), SIORacket.COLOR_BAD),
-            (event.Event(SIORacket.COLOR_TRANS_TIME,
-                self.generic_color_trans(SIORacket.COLOR_BAD, None)), None)
+            (event.Event(SocketRacket.COLOR_TRANS_TIME,
+                self.generic_color_trans(None, SocketRacket.COLOR_BAD)), None),
+            (event.Event(SocketRacket.COLOR_REJECT_TIME,
+                self.generic_flash()), SocketRacket.COLOR_BAD),
+            (clear_event.ClearEvent(clear_color = True), SocketRacket.COLOR_BAD),
+            (event.Event(SocketRacket.COLOR_TRANS_TIME,
+                self.generic_color_trans(SocketRacket.COLOR_BAD, None)), None)
           ]
       }
 
-  # @filter_player
+  @filter_player
   def on_sio_game_is_server(self):
     # Callback for when the player becomes the person serving the ball
     print 'socketio: game_is_server'
@@ -238,13 +321,13 @@ class SIORacket(racket.Racket):
     self.state = GameState.SERVER
     self.state_data = {
         'events': [
-            (event.Event(SIORacket.SERVER_TIME,
+            (event.Event(SocketRacket.SERVER_TIME,
                 self.generic_flash(freq = 2)), None),
             (clear_event.ClearEvent(), None)
           ]
       }
 
-  # @filter_player
+  @filter_player
   def on_sio_game_missed_ball(self):
     # Callback for a missed ball event
     print 'socketio: game_missed_ball'
@@ -256,17 +339,17 @@ class SIORacket(racket.Racket):
     self.state = GameState.LOST_RALLY
     self.state_data = {
         'events': [
-            (event.Event(SIORacket.COLOR_TRANS_TIME,
-                self.generic_color_trans(None, SIORacket.COLOR_LOSE)), None),
-            (event.Event(SIORacket.LOST_RALLY_TIME,
-                self.generic_flash(freq = 2)), SIORacket.COLOR_LOSE),
-            (clear_event.ClearEvent(clear_color = True), SIORacket.COLOR_LOSE),
-            (event.Event(SIORacket.COLOR_TRANS_TIME,
-                self.generic_color_trans(SIORacket.COLOR_LOSE, None)), None)
+            (event.Event(SocketRacket.COLOR_TRANS_TIME,
+                self.generic_color_trans(None, SocketRacket.COLOR_LOSE)), None),
+            (event.Event(SocketRacket.LOST_RALLY_TIME,
+                self.generic_flash(freq = 2)), SocketRacket.COLOR_LOSE),
+            (clear_event.ClearEvent(clear_color = True), SocketRacket.COLOR_LOSE),
+            (event.Event(SocketRacket.COLOR_TRANS_TIME,
+                self.generic_color_trans(SocketRacket.COLOR_LOSE, None)), None)
           ]
       }
 
-  # @filter_player
+  @filter_player
   def on_sio_game_hit_ball(self, data):
     # Callback for a hit ball event
     print 'socketio: game_hit_ball'
@@ -281,13 +364,13 @@ class SIORacket(racket.Racket):
     self.state = GameState.HIT_BALL
     self.state_data = {
         'events': [
-            (event.Event(SIORacket.HIT_TIME,
+            (event.Event(SocketRacket.HIT_TIME,
                 self.generic_flash(color_scale = strength)), None),
             (clear_event.ClearEvent(), None)
           ]
       }
 
-  # @filter_player
+  @filter_player
   def on_sio_game_won_rally(self):
     # Callback for when a player wins the rally
     print 'socketio: game_won_rally'
@@ -299,65 +382,90 @@ class SIORacket(racket.Racket):
     self.state = GameState.WON_RALLY
     self.state_data = {
         'events': [
-            (event.Event(SIORacket.COLOR_TRANS_TIME,
-                self.generic_color_trans(None, SIORacket.COLOR_WIN)), None),
-            (event.Event(SIORacket.WON_RALLY_TIME,
-                self.generic_flash(freq = 2)), SIORacket.COLOR_WIN),
-            (clear_event.ClearEvent(clear_color = True), SIORacket.COLOR_WIN),
-            (event.Event(SIORacket.COLOR_TRANS_TIME,
-                self.generic_color_trans(SIORacket.COLOR_WIN, None)), None),
+            (event.Event(SocketRacket.COLOR_TRANS_TIME,
+                self.generic_color_trans(None, SocketRacket.COLOR_WIN)), None),
+            (event.Event(SocketRacket.WON_RALLY_TIME,
+                self.generic_flash(freq = 2)), SocketRacket.COLOR_WIN),
+            (clear_event.ClearEvent(clear_color = True), SocketRacket.COLOR_WIN),
+            (event.Event(SocketRacket.COLOR_TRANS_TIME,
+                self.generic_color_trans(SocketRacket.COLOR_WIN, None)), None),
           ]
       }
 
-  # @filter_player
+  @filter_player
   def on_sio_game_over(self, data):
     # Callback for when the game ends
     print 'socketio: game_over'
 
     # Parse parameters
-    is_winner = data['is_winner']
+    winner = data['winner']
 
     # Disable swings
     self.enable_swings = False
 
     # Chose which color and which end-state
-    color = SIORacket.COLOR_WIN
-    if(is_winner):
+    color = SocketRacket.COLOR_WIN
+    if(self.player_num == winner):
       self.state = GameState.END_GAME_WIN
     else:
-      color = SIORacket.COLOR_LOSE
+      color = SocketRacket.COLOR_LOSE
       self.state = GameState.END_GAME_LOST
 
     # Parameterize the transition with animations
     self.state_data = {
         'events': [
-            (event.Event(SIORacket.COLOR_TRANS_TIME,
+            (event.Event(SocketRacket.COLOR_TRANS_TIME,
                 self.generic_color_trans(None, color)), None),
-            (event.Event(SIORacket.OVER_TIME,
+            (event.Event(SocketRacket.OVER_TIME,
                 self.generic_flash(freq = 5)), color),
             (clear_event.ClearEvent(clear_color = True), color),
-            (event.Event(SIORacket.COLOR_TRANS_TIME,
-                self.generic_color_trans(color, SIORacket.COLOR_CLEAR)), None)
+            (event.Event(SocketRacket.COLOR_TRANS_TIME,
+                self.generic_color_trans(color, SocketRacket.COLOR_CLEAR)), None)
+          ]
+      }
+
+  def on_sio_game_restart(self, data):
+    # Callback for when the game ends
+    print 'socketio: game_restart'
+
+    # Disable swings
+    self.enable_swings = False
+
+    # Restart the state machine
+    self.state = GameState.COLOR_SELECTION
+
+    # Parameterize the transition with animations
+    self.state_data = {
+        'events': [
+            (event.Event(SocketRacket.RESET_TIME,
+                self.generic_flash(color = False)), None),
+            (event.Event(SocketRacket.COLOR_TRANS_TIME,
+                self.generic_color_trans(None, SocketRacket.COLOR_CLEAR)), None),
+            (clear_event.ClearEvent(), None)
           ]
       }
 
   ########################### socketio Emits ###################################
 
+  def sio_game_reset(self):
+    # Method to communicate the color choice
+    self._ev_send.put(('game_reset', {}))
+
   def sio_init_color_choice(self, color):
     # Method to communicate the color choice
-    self._sio.emit('init_color_choice', {
+    self._ev_send.put(('init_color_choice', {
         'player_num': self.player_num,
         'color': color,
-      })
+      }))
 
   def sio_game_swing(self, hand, strength):
     # Method to communicate the swing event
 
-    self._sio.emit('game_swing', {
+    self._ev_send.put(('game_swing', {
         'player_num': self.player_num,
         'hand': (0 if(hand == racket.Handedness.LEFT) else 1),
         'strength': strength
-      })
+      }))
 
   ############################ Racket Events ###################################
 
@@ -380,40 +488,15 @@ class SIORacket(racket.Racket):
 
   ############################# Button Events ##################################
 
-  def on_button(self, controller, buttons):
+  def on_button(self, controller, pressed, held, released):
     # Method to parse button presses
 
-    # Temporary to cycle through animations
-    # Pressing the PS button simulates an in-order server event
-    if(psmoveapi.Button.PS in buttons):
-      if(self.state == GameState.COLOR_WAIT):
-        if(bool(random.randint(0, 1))):
-          self.on_sio_init_color_reject()
-        else:
-          self.on_sio_init_color_confirm()
-
-      elif(self.state == GameState.START_WAIT):
-        self.on_sio_game_is_server()
-
-      elif(self.state == GameState.GAMEPLAY):
-        end_rally = False
-
-        if(bool(random.randint(0, 3))):
-          self.on_sio_game_hit_ball({'strength': 0.75})
-          if(not bool(random.randint(0, 5))):
-            self.on_sio_game_won_rally()
-            end_rally = True
-        else:
-          self.on_sio_game_missed_ball()
-          end_rally = True
-
-        if(end_rally and not bool(random.randint(0, 5))):
-          if(bool(random.randint(0, 1))):
-            self.on_sio_game_over({'is_winner': False})
-          else:
-            self.on_sio_game_over({'is_winner': True})
-
-      return
+    # Forceful reset
+    if((self.state != GameState.RESET_WAIT)
+        and (psmoveapi.Button.SELECT in held)
+        and (psmoveapi.Button.START in held)):
+      self.sio_game_reset()
+      self.state = GameState.RESET_WAIT
 
     # Color choosing logic
     if(self.state == GameState.COLOR_SELECTION):
@@ -422,25 +505,25 @@ class SIORacket(racket.Racket):
 
       # Cycle through button options
       for button in choices:
-        if(button in buttons):
-          self.color_choice = SIORacket.COLORS[button]
+        if(button in pressed):
+          self.color_choice = SocketRacket.COLORS[button]
           controller.color = psmoveapi.RGB(*self.color_choice)
           return
 
-    # Color confirmation logic
-    if((self.color_choice is not None) and (psmoveapi.Button.MOVE in buttons)):
-      self.sio_init_color_choice(self.color_choice)
+      # Color confirmation logic
+      if((self.color_choice is not None) and (psmoveapi.Button.MOVE in pressed)):
+        self.sio_init_color_choice(self.color_choice)
 
-      # Signal a transition to the next state
-      self.state = GameState.COLOR_WAIT
-      self.state_data = {
-          'events': [
-              (event.Event(SIORacket.COLOR_WAIT_TIME,
-                  self.generic_flash(rumble_scale = 0.75,
-                      color_scale = 0.75)), None),
-              (clear_event.ClearEvent(), None)
-            ]
-        }
+        # Signal a transition to the next state
+        self.state = GameState.COLOR_WAIT
+        self.state_data = {
+            'events': [
+                (event.Event(SocketRacket.COLOR_WAIT_TIME,
+                    self.generic_flash(rumble_scale = 0.75,
+                        color_scale = 0.75)), None),
+                (clear_event.ClearEvent(), None)
+              ]
+          }
 
   ######################### Housekeeping Events ################################
 
@@ -449,7 +532,7 @@ class SIORacket(racket.Racket):
     print 'psmove:', controller, 'connected!'
 
     # Set the controller to be blank
-    controller.color = psmoveapi.RGB(*SIORacket.COLOR_CLEAR)
+    controller.color = psmoveapi.RGB(*SocketRacket.COLOR_CLEAR)
     controller.rumble = 0
 
   def on_leave(self, controller):
