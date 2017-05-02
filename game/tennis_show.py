@@ -185,6 +185,8 @@ class TennisShow(Show):
         player = self.players[player_num]
         other_player = self.players[other_player_num]
 
+        player.handedness = data["hand"] # read handedness
+
         if other_player.color == color:
             print "Player %d rejected for %s" % (player_num, color)
             # inform them their color has already been chosen
