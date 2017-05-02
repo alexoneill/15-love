@@ -5,15 +5,14 @@ import math
 import functools
 
 import socket
-import threading
-import Queue
-import pickle
 
 from libs import psmoveapi
 
 from src.base import event
 from src.base import racket
+from src.base import socket_event
 from src.events import clear_event
+from src.net_events import dispatcher
 
 
 class GameState(object):
@@ -44,78 +43,6 @@ def filter_player(func):
         func(self)
 
   return inner
-
-
-class EventListener(threading.Thread):
-  MSG_LEN = 4096
-
-  def __init__(self, sock):
-    super(EventListener, self).__init__()
-
-    self.sock = sock
-    self._queue = Queue.Queue()
-
-    self.start()
-
-  def has(self):
-    return (not self._queue.empty())
-
-  def get(self, blocking = False):
-    return self._queue.get(blocking)
-
-  def run(self):
-    while(True):
-      data = self.sock.recv(EventListener.MSG_LEN)
-      if(data == ''):
-        return
-
-      data = pickle.loads(data)
-      print 'EventListener:', data
-      self._queue.put(data)
-
-
-class EventDispatcher(threading.Thread):
-  def __init__(self, sock):
-    super(EventDispatcher, self).__init__()
-    self._listener = EventListener(sock)
-    self._events = {}
-
-    self.start()
-
-  def on(self, event, func):
-    self._events[event] = func
-
-  def run(self):
-    while(True):
-      (id_str, data) = self._listener.get(blocking = True)
-      if(id_str in self._events):
-        func = self._events[id_str]
-
-        print 'EventDispatcher:', (func.__name__, data)
-        func(data)
-
-
-class EventSender(threading.Thread):
-  MSG_LEN = 4096
-
-  def __init__(self, sock):
-    super(EventSender, self).__init__()
-
-    self.sock = sock
-    self._queue = Queue.Queue()
-
-    self.start()
-
-  def put(self, data):
-    return self._queue.put(data)
-
-  def run(self):
-    while(True):
-      data = self._queue.get(True)
-      print 'EventSender:', data
-
-      data = pickle.dumps(data)
-      self.sock.send(data)
 
 
 class SocketRacket(racket.Racket):
@@ -166,8 +93,8 @@ class SocketRacket(racket.Racket):
     sock.connect((self.sio_host, self.sio_port))
 
     # Get event helpers
-    self._ev_disp = EventDispatcher(sock)
-    self._ev_send = EventSender(sock)
+    self._ev_disp = dispatcher.EventDispatcher(sock)
+    self._ev_send = socket_event.EventSender(sock)
 
     # socketio callbacks
     # Basic
