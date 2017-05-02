@@ -494,7 +494,8 @@ class SocketRacket(racket.Racket):
     # Forceful reset
     if((self.state != GameState.RESET_WAIT)
         and (psmoveapi.Button.SELECT in held)
-        and (psmoveapi.Button.START in held)):
+        and (psmoveapi.Button.START in held)
+        and (psmoveapi.Button.PS in held)):
       self.sio_game_reset()
       self.state = GameState.RESET_WAIT
 
