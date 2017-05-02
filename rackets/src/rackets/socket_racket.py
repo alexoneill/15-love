@@ -186,11 +186,15 @@ class SocketRacket(racket.Racket):
 
     print 'socketio: init'
 
-    # Other parameters
+    # Game state parameters
     self.state = GameState.COLOR_SELECTION
     self.state_data = None
-    self.color_choice = None
     self.enable_swings = False
+
+    # User parameters
+    # Default to right
+    self.hand = 1
+    self.color_choice = None
 
     print 'racket: init'
 
@@ -451,11 +455,12 @@ class SocketRacket(racket.Racket):
     # Method to communicate the color choice
     self._ev_send.put(('game_reset', {}))
 
-  def sio_init_color_choice(self, color):
+  def sio_init_color_choice(self, color, hand):
     # Method to communicate the color choice
     self._ev_send.put(('init_color_choice', {
         'player_num': self.player_num,
         'color': color,
+        'hand': hand,
       }))
 
   def sio_game_swing(self, hand, strength):
@@ -464,7 +469,7 @@ class SocketRacket(racket.Racket):
     self._ev_send.put(('game_swing', {
         'player_num': self.player_num,
         'hand': (0 if(hand == racket.Handedness.LEFT) else 1),
-        'strength': strength
+        'strength': strength,
       }))
 
   ############################ Racket Events ###################################
@@ -511,13 +516,8 @@ class SocketRacket(racket.Racket):
           controller.color = psmoveapi.RGB(*self.color_choice)
           return
 
-      # Color confirmation logic
-      if((self.color_choice is not None) and (psmoveapi.Button.MOVE in pressed)):
-        self.sio_init_color_choice(self.color_choice)
-
-        # Signal a transition to the next state
-        self.state = GameState.COLOR_WAIT
-        self.state_data = {
+      # Generic animation for a confirmation
+      confirm_data = {
             'events': [
                 (event.Event(SocketRacket.COLOR_WAIT_TIME,
                     self.generic_flash(rumble_scale = 0.75,
@@ -525,6 +525,24 @@ class SocketRacket(racket.Racket):
                 (clear_event.ClearEvent(), None)
               ]
           }
+
+      # Handedness confirmation
+      if(psmoveapi.Button.SELECT in pressed):
+        self.hand = 0
+        self.state_data = confirm_data
+
+      elif(psmoveapi.Button.START in pressed):
+        self.hand = 1
+        self.state_data = confirm_data
+
+      # Color confirmation logic
+      elif((self.color_choice is not None)
+          and (psmoveapi.Button.MOVE in pressed)):
+        self.sio_init_color_choice(self.color_choice, self.hand)
+
+        # Signal a transition to the next state
+        self.state = GameState.COLOR_WAIT
+        self.state_data = confirm_data
 
   ######################### Housekeeping Events ################################
 
