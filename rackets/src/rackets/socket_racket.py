@@ -529,7 +529,10 @@ class SocketRacket(racket.Racket):
         else:
           # Execute the event at the front of the queue
           (event, color) = events[0]
-          color = self.color_choice if(color is None) else color
+          if(self.color_choice is not None):
+            color = self.color_choice if(color is None) else color
+          else:
+            color = SocketRacket.COLOR_CLEAR
 
           event.do(controller, color)
           if(event.done()):
