@@ -34,6 +34,7 @@ class TennisShow(Show):
 
     NUM_FIREWORKS = 20 # number of fireworks to show at the end
     POINTS_TO_WIN = 4 # number of points to win
+    STRENGTH_THRESHOLD = 0.2 # threshold under which to not count the swing
 
     def init(self):
         # offset of start panel for player 1 and player 2
@@ -100,7 +101,8 @@ class TennisShow(Show):
     *******************************************************"""
     def reset(self, **kwargs):
         print "Restarting game"
-        self.outqueue.put(("game_restart"))
+        self.outqueue.put(("game_restart", { "player_num": 1 }))
+        self.outqueue.put(("game_restart", { "player_num": 2 }))
         self.init() # just call the init function again
 
     def reset_rally(self):
@@ -119,13 +121,16 @@ class TennisShow(Show):
         # get ball ready to be served
         ball = self.ball
         ball.is_active = True
+        ball.counter = 1.0 # reset speed multiplier
         ball.velocity = 0
         if serving_player == 1:
-            ball.x = self.p1.origin + self.p1.max_swing
-            lo, hi = ball.x - 2, ball.x
+            ball.x = self.p1.origin + self.p1.max_swing - 3
+            lo, hi = ball.x - 3, ball.x
+            print "Ball spans [%d, %d]" % (lo, hi)
         else:
-            ball.x = self.p2.origin - self.p2.max_swing
-            lo, hi = ball.x, ball.x + 2
+            ball.x = self.p2.origin - self.p2.max_swing + 3
+            lo, hi = ball.x, ball.x + 3
+            print "Ball spans [%d, %d]" % (lo, hi)
 
         # show flashing ball animation
         animations = [ PulseAnimation(start=lo, end=hi, color=ball.color) ]
@@ -162,7 +167,6 @@ class TennisShow(Show):
             if p1.color != None and p2.color != None and p1_animation.fade_level == 0:
                 # start the game loop
                 del self.actions["flash_players"]
-                self.outqueue.put(("game_start"))
                 self.reset_rally()
 
         # delegate to flash_players
@@ -180,6 +184,8 @@ class TennisShow(Show):
         # get players from dictionary
         player = self.players[player_num]
         other_player = self.players[other_player_num]
+
+        player.handedness = data["hand"] # read handedness
 
         if other_player.color == color:
             print "Player %d rejected for %s" % (player_num, color)
@@ -219,8 +225,12 @@ class TennisShow(Show):
     # swing event received
     def swing(self, data):
         def player_swing(player, opponent):
-            player.swing()
+            if data["strength"] <= TennisShow.STRENGTH_THRESHOLD:
+                print "Player swing too weak (%.3f <= %.3f)" % (data["strength"], TennisShow.STRENGTH_THRESHOLD)
+                return
             player.set_strength(data["strength"])
+            player.hand = data["hand"]
+            player.swing()
             ball = self.ball
             # serve if it is your turn to serve
             if player.serving and ball.velocity == 0:
@@ -244,14 +254,14 @@ class TennisShow(Show):
             # hit ball if it has crossed where the player is swinging
             if player.velocity > 0 and ball.velocity <= 0 and bseq <= pseq:
                 self.actions.pop("flashing_ball", None) # remove animation from dict
-                self.outqueue.put(("game_hit_ball", { "player_num": 1 }))
-                ball.hit(self.p1)
-                print "Player 1 hit ball traveling with velocity %.3f" % ball.velocity
+                self.outqueue.put(("game_hit_ball", { "player_num": 1, "strength": self.p1.strength }))
+                ball.hit(self.p1, self.p2.color)
+                print "Player 1 hit ball at %.3f" % ball.velocity
             elif player.velocity < 0 and ball.velocity >= 0 and bseq >= pseq:
                 self.actions.pop("flashing_ball", None) # remove animation from dict
-                self.outqueue.put(("game_hit_ball", { "player_num": 2 }))
-                ball.hit(self.p2)
-                print "Player 2 hit ball traveling with velocity %.3f" % ball.velocity
+                self.outqueue.put(("game_hit_ball", { "player_num": 2, "strength": self.p2.strength }))
+                ball.hit(self.p2, self.p1.color)
+                print "Player 2 hit ball at %.3f" % ball.velocity
 
     # show several animations at once
     def animate(self, animations, name=None, on_complete=lambda: None):
@@ -334,12 +344,13 @@ class TennisShow(Show):
         player_num = argmax(lambda i: self.players[i].score, [ 1, 2 ]) # player with highest score wins
         winning_player = self.players[player_num]
 
-        self.outqueue.put(("game_over", { "player_num": player_num }))
+        self.outqueue.put(("game_over", { "player_num": 1, "winner": player_num }))
+        self.outqueue.put(("game_over", { "player_num": 2, "winner": player_num }))
 
         color = winning_player.color
         animations = [ FireworkAnimation(color) ]
 
         # generate 20 fireworks
-        del self.animations["end_bridge"]
+        del self.actions["end_bridge"]
         self.actions["generate_fireworks"] = self.generate_fireworks(animations, color, TennisShow.NUM_FIREWORKS)
         self.actions["fireworks"] = self.animate(animations, "fireworks", self.reset)

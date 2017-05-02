@@ -18,18 +18,21 @@ game_hit_ball: dict
 game_is_server: dict
   - player_num: int
 
-game_start: None
+game_start: dict
+- player_num: int
 
 game_over: dict
   - player_num: int
 
-game_restart: None
+game_restart: dict
+  - player_num: int
 
 Racket - Emit
 =============
 init_color_choice: dict
   - player_num: int
   - color: (float[0, 1] * float[0, 1] * float[0, 1])
+  - hand: int (0 ->left, 1 -> right)
 
 game_swing: dict
   - player_num: int

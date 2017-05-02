@@ -58,6 +58,7 @@ class ScoreBars(Animation):
 
     def init(self, end_seq):
         self.end_x = end_seq
+        print "End: ", end_seq
         self.is_active = True
         self.priority = SCORE_PRIORITY
         self.flashing = False
@@ -141,7 +142,7 @@ class PulseAnimation(object):
 class ScoreAnimation(object):
 
     # distance between consecutive score panels
-    SEPARATION = 2 # sequences
+    SEPARATION = 4 # sequences
     VELOCITY = 4 # sequences per frame for score bars
     FADE_FRAMES = 10 # how long it takes to fade
 
@@ -163,8 +164,8 @@ class ScoreAnimation(object):
     def make_scorebar_animations(self):
         animations = []
         p1, p2 = self.p1, self.p2
-        p1_offset = p1.origin + p1.max_swing - 4 * ScoreAnimation.SEPARATION
-        p2_offset = p2.origin - p2.max_swing + 4 * ScoreAnimation.SEPARATION
+        p1_offset = 26 # edge of 4-panel
+        p2_offset = 185 # edge of 4-panel
 
         # constants used when creating animations
         v = ScoreAnimation.VELOCITY
@@ -178,7 +179,7 @@ class ScoreAnimation(object):
             s2 = ScoreBars(origin=lo+1, end_seq=p2_offset, color=self.p1.color, velocity=v)
 
             # make most recently-earned point flash
-            if self.awarded_player == 1 and i == 0:
+            if self.awarded_player == 1 and i == self.p1.score - 1:
                 s1.flashing = True
                 s2.flashing = True
 
@@ -193,7 +194,7 @@ class ScoreAnimation(object):
             s2 = ScoreBars(origin=lo, end_seq=p2_offset, color=self.p2.color, velocity=v)
 
             # make most recently-earned point flash
-            if self.awarded_player == 2 and i == 0:
+            if self.awarded_player == 2 and i == self.p2.score - 1:
                 s1.flashing = True
                 s2.flashing = True
 
@@ -237,15 +238,18 @@ class ScoreAnimation(object):
             if not any_active:
                 self.is_active = False
 
-
 # Class that represents ball state, including velocity and location
 class Ball(Animation):
-    INCREASE = 1.05 # multiplicative increase of ball speed
+    INCREASE = 1.03 # multiplicative increase of ball speed
+    BACKHAND_MULTIPLIER = 1.25 # speed boost to backhand ball
+    BACKHAND_PROBABILITY = 10 # inverse of probability of a backhand round
     # max_seq is the furthest sequence the ball is allowed to go to
     def init(self, max_seq):
         self.max_seq = max_seq
         self.starting_velocity = self.velocity
         self.priority = BALL_PRIORITY
+        self.counter = 1.0
+        self.backhand = False
 
     def update(self, show):
         if self.is_active:
@@ -260,17 +264,35 @@ class Ball(Animation):
                 # make the show perform the actions it does when a player misses
                 show.on_missed_ball(awarded_player)
 
-    def hit(self, player):
+    def hit(self, player, other_color):
         # change direction when hit
         if self.velocity == 0:
             self.velocity = self.starting_velocity * sign(player.velocity) * player.strength
         else:
-            self.velocity = -self.velocity * Ball.INCREASE * player.strength
+            self.counter *= Ball.INCREASE
+            self.velocity = self.counter * sign(player.velocity) * self.starting_velocity * player.strength
+            if self.backhand and player.hand != player.handedness: # use wrong hand
+                print "Backhand rally returned backhand"
+                self.color = Colors.WHITE # set white to indicate backhand successful
+                self.velocity *= Ball.BACKHAND_MULTIPLIER
+            elif self.backhand:
+                print "Backhand rally returned forehand"
+                self.backhand = False
+                self.color = Colors.YELLOW # switch back to normal round
+
+        print self.velocity
+
+        # go into backhand mode with some probability
+        if not self.backhand and random.randint(1, Ball.BACKHAND_PROBABILITY) == 1:
+            print "Starting backhand rally"
+            self.backhand = True
+            self.color = other_color # set color to other player's color
 
 # Class that represents where the player's state, including swing location
 class Player(Animation):
     def init(self, max_swing):
         self.score = 0
+        self.handedness = 1 # right handed
         self.max_swing = max_swing # number of panels the swing spans
         self.serving = False
         self.priority = PLAYER_PRIORITY
@@ -315,16 +337,19 @@ class FireworkAnimation(object):
     def __init__(self, color):
         self.is_active = True # always active
 
-        color = Colors.fade(color, random.random())
+        p = random.random() # priority (and vividness)
+        color = Colors.fade(color, p)
         seq = random.randint(Bridge.SEQ_LO, Bridge.SEQ_HI)
         v = random.random() * (FireworkAnimation.MAX_VELOCITY - FireworkAnimation.MIN_VELOCITY)
         v += FireworkAnimation.MIN_VELOCITY
-        p = random.randint(10, 100) # priority
+
+        lo, hi = 10, 30
+        pr = p * (hi - lo) + lo # choose random number in range [lo, hi) for priority
 
         # create two bursts going in opposite directions
         self.animations = [
-            FireworkBurst(origin=seq, color=color, velocity=v, priority=p),
-            FireworkBurst(origin=seq, color=color, velocity=-v, priority=p),
+            FireworkBurst(origin=seq, color=color, velocity=v, priority=pr),
+            FireworkBurst(origin=seq, color=color, velocity=-v, priority=pr),
         ]
 
     # delegate updating and rendering to underlying animations
