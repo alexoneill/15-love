@@ -91,6 +91,7 @@ function psmoveapi() {
     -DPSMOVE_BUILD_EXAMPLES=OFF \
     -DPSMOVE_BUILD_OPENGL_EXAMPLES=OFF \
     -DPSMOVE_BUILD_TESTS=OFF \
+    -DPSMOVE_USE_DEBUG=1 \
     && make || return
 
   # Fix Python2 issues
