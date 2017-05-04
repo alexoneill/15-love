@@ -42,7 +42,7 @@ def main(bridge):
                     elif inp[1] == "x":
                         inqueue.put(("init_color_choice", { "player_num": x, "color": Colors.SKY_BLUE }))
                 else:
-                    inqueue.put(("game_swing", { "player_num": x, "hand": 0, "strength": 1.0 }))
+                    inqueue.put(("game_swing", { "player_num": x, "hand": 1, "strength": 1.0 }))
             except:
                 pass
 
