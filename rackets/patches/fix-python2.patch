@@ -1,8 +1,20 @@
 diff --git a/bindings/python/psmoveapi.py b/bindings/python/psmoveapi.py
-index 0fb1d93..9a4159d 100644
+index 0fb1d93..f928a99 100644
 --- a/bindings/python/psmoveapi.py
 +++ b/bindings/python/psmoveapi.py
-@@ -147,11 +147,11 @@ class Controller(object):
+@@ -32,7 +32,10 @@ import sys
+ import os
+ import math
+
+-library_path = os.environ.get('PSMOVEAPI_LIBRARY_PATH', None)
++library_path =  os.path.join(os.path.dirname(__file__),
++    '..', '..', 'build'
++  )
++
+ if library_path:
+     library_prefix = library_path + os.sep
+ else:
+@@ -147,11 +150,11 @@ class Controller(object):
          if name != '_controller' and hasattr(self._controller, name):
              setattr(self._controller, name, value)
 
@@ -16,7 +28,7 @@ index 0fb1d93..9a4159d 100644
          elif name == 'serial':
              return self._controller.serial.decode('utf-8')
          elif name in ('bluetooth', 'usb'):
-@@ -159,7 +159,7 @@ class Controller(object):
+@@ -159,7 +162,7 @@ class Controller(object):
          elif hasattr(self._controller, name):
              return getattr(self._controller, name)
 

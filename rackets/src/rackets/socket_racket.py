@@ -5,15 +5,14 @@ import math
 import functools
 
 import socket
-import threading
-import Queue
-import pickle
 
 from libs import psmoveapi
 
 from src.base import event
 from src.base import racket
+from src.base import socket_event
 from src.events import clear_event
+from src.net_events import dispatcher
 
 
 class GameState(object):
@@ -44,78 +43,6 @@ def filter_player(func):
         func(self)
 
   return inner
-
-
-class EventListener(threading.Thread):
-  MSG_LEN = 4096
-
-  def __init__(self, sock):
-    super(EventListener, self).__init__()
-
-    self.sock = sock
-    self._queue = Queue.Queue()
-
-    self.start()
-
-  def has(self):
-    return (not self._queue.empty())
-
-  def get(self, blocking = False):
-    return self._queue.get(blocking)
-
-  def run(self):
-    while(True):
-      data = self.sock.recv(EventListener.MSG_LEN)
-      if(data == ''):
-        return
-
-      data = pickle.loads(data)
-      print 'EventListener:', data
-      self._queue.put(data)
-
-
-class EventDispatcher(threading.Thread):
-  def __init__(self, sock):
-    super(EventDispatcher, self).__init__()
-    self._listener = EventListener(sock)
-    self._events = {}
-
-    self.start()
-
-  def on(self, event, func):
-    self._events[event] = func
-
-  def run(self):
-    while(True):
-      (id_str, data) = self._listener.get(blocking = True)
-      if(id_str in self._events):
-        func = self._events[id_str]
-
-        print 'EventDispatcher:', (func.__name__, data)
-        func(data)
-
-
-class EventSender(threading.Thread):
-  MSG_LEN = 4096
-
-  def __init__(self, sock):
-    super(EventSender, self).__init__()
-
-    self.sock = sock
-    self._queue = Queue.Queue()
-
-    self.start()
-
-  def put(self, data):
-    return self._queue.put(data)
-
-  def run(self):
-    while(True):
-      data = self._queue.get(True)
-      print 'EventSender:', data
-
-      data = pickle.dumps(data)
-      self.sock.send(data)
 
 
 class SocketRacket(racket.Racket):
@@ -166,8 +93,8 @@ class SocketRacket(racket.Racket):
     sock.connect((self.sio_host, self.sio_port))
 
     # Get event helpers
-    self._ev_disp = EventDispatcher(sock)
-    self._ev_send = EventSender(sock)
+    self._ev_disp = dispatcher.EventDispatcher(sock)
+    self._ev_send = socket_event.EventSender(sock)
 
     # socketio callbacks
     # Basic
@@ -186,11 +113,15 @@ class SocketRacket(racket.Racket):
 
     print 'socketio: init'
 
-    # Other parameters
+    # Game state parameters
     self.state = GameState.COLOR_SELECTION
     self.state_data = None
-    self.color_choice = None
     self.enable_swings = False
+
+    # User parameters
+    # Default to right
+    self.hand = 1
+    self.color_choice = None
 
     print 'racket: init'
 
@@ -451,11 +382,12 @@ class SocketRacket(racket.Racket):
     # Method to communicate the color choice
     self._ev_send.put(('game_reset', {}))
 
-  def sio_init_color_choice(self, color):
+  def sio_init_color_choice(self, color, hand):
     # Method to communicate the color choice
     self._ev_send.put(('init_color_choice', {
         'player_num': self.player_num,
         'color': color,
+        'hand': hand,
       }))
 
   def sio_game_swing(self, hand, strength):
@@ -464,7 +396,7 @@ class SocketRacket(racket.Racket):
     self._ev_send.put(('game_swing', {
         'player_num': self.player_num,
         'hand': (0 if(hand == racket.Handedness.LEFT) else 1),
-        'strength': strength
+        'strength': strength,
       }))
 
   ############################ Racket Events ###################################
@@ -494,7 +426,8 @@ class SocketRacket(racket.Racket):
     # Forceful reset
     if((self.state != GameState.RESET_WAIT)
         and (psmoveapi.Button.SELECT in held)
-        and (psmoveapi.Button.START in held)):
+        and (psmoveapi.Button.START in held)
+        and (psmoveapi.Button.PS in held)):
       self.sio_game_reset()
       self.state = GameState.RESET_WAIT
 
@@ -510,13 +443,8 @@ class SocketRacket(racket.Racket):
           controller.color = psmoveapi.RGB(*self.color_choice)
           return
 
-      # Color confirmation logic
-      if((self.color_choice is not None) and (psmoveapi.Button.MOVE in pressed)):
-        self.sio_init_color_choice(self.color_choice)
-
-        # Signal a transition to the next state
-        self.state = GameState.COLOR_WAIT
-        self.state_data = {
+      # Generic animation for a confirmation
+      confirm_data = {
             'events': [
                 (event.Event(SocketRacket.COLOR_WAIT_TIME,
                     self.generic_flash(rumble_scale = 0.75,
@@ -524,6 +452,24 @@ class SocketRacket(racket.Racket):
                 (clear_event.ClearEvent(), None)
               ]
           }
+
+      # Handedness confirmation
+      if(psmoveapi.Button.SELECT in pressed):
+        self.hand = 0
+        self.state_data = confirm_data
+
+      elif(psmoveapi.Button.START in pressed):
+        self.hand = 1
+        self.state_data = confirm_data
+
+      # Color confirmation logic
+      elif((self.color_choice is not None)
+          and (psmoveapi.Button.MOVE in pressed)):
+        self.sio_init_color_choice(self.color_choice, self.hand)
+
+        # Signal a transition to the next state
+        self.state = GameState.COLOR_WAIT
+        self.state_data = confirm_data
 
   ######################### Housekeeping Events ################################
 
@@ -583,7 +529,10 @@ class SocketRacket(racket.Racket):
         else:
           # Execute the event at the front of the queue
           (event, color) = events[0]
-          color = self.color_choice if(color is None) else color
+          if(self.color_choice is not None):
+            color = self.color_choice if(color is None) else color
+          else:
+            color = SocketRacket.COLOR_CLEAR
 
           event.do(controller, color)
           if(event.done()):

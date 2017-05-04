@@ -43,7 +43,6 @@ PSMOVEAPI_BINDS = os.path.join(os.path.dirname(__file__),
 
 sys.path.insert(0, PSMOVEAPI_BUILD)
 sys.path.insert(1, PSMOVEAPI_BINDS)
-os.putenv('PSMOVEAPI_LIBRARY_PATH', PSMOVEAPI_BUILD)
 
 import psmove
 import psmoveapi

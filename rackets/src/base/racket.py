@@ -52,7 +52,7 @@ class Racket(psmoveapi.PSMoveAPI):
   def _step_backswing(self, controller):
     # Transition from IDLE to BACKSWING if it makes sense
     if(self._state == SwingState.IDLE):
-      if(controller.accelerometer.length() > Racket.SWING_PAUSE):
+      if(controller.accelerometer.length() > Racket.SWING_MIN_STRENGTH):
         if(controller.trigger > Racket.TRIGGER_BACK):
           self._state = SwingState.BACKSWING
 
@@ -69,15 +69,14 @@ class Racket(psmoveapi.PSMoveAPI):
   def _step_swing(self, controller):
     # Transition from TRANSITION to SWING if it makes sense
     if(self._state == SwingState.BACKSWING):
-      if(controller.accelerometer.length() > Racket.SWING_PAUSE):
+      if(controller.accelerometer.length() > Racket.SWING_MIN_STRENGTH):
         if(controller.trigger < Racket.TRIGGER_BACK):
           self._state = SwingState.SWING
 
           # Calculate strength
           strength = min(Racket.SWING_MAX_STRENGTH,
-              max(Racket.SWING_MIN_STRENGTH, controller.accelerometer.length()))
-          strength = ((strength - Racket.SWING_MIN_STRENGTH) /
-              (Racket.SWING_MAX_STRENGTH - Racket.SWING_MIN_STRENGTH))
+              max(0, controller.accelerometer.length()))
+          strength /= Racket.SWING_MAX_STRENGTH
 
           # Call our callback if defined
           (self.on_swing or (lambda *args: None))(
