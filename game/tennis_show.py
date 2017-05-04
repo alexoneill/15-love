@@ -50,8 +50,8 @@ class TennisShow(Show):
         p2 = Player(color=None, origin=p2_seq, max_swing=max_swing, velocity=-2)
         ball = Ball(color=ball_color, origin=p1_seq, max_seq=p2_seq, velocity=3)
 
-        # p1 serves first
-        p1.serving = True
+        # random player serves first
+        random.choice([p1, p2]).serving = True
 
         # define what objects game should update every loop
         self.moving_objects = [ p1, p2, ball ]
@@ -120,6 +120,7 @@ class TennisShow(Show):
 
         # get ball ready to be served
         ball = self.ball
+        ball.color = Colors.YELLOW
         ball.is_active = True
         ball.counter = 1.0 # reset speed multiplier
         ball.velocity = 0

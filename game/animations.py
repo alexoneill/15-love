@@ -142,7 +142,7 @@ class PulseAnimation(object):
 class ScoreAnimation(object):
 
     # distance between consecutive score panels
-    SEPARATION = 4 # sequences
+    SEPARATION = 2 # sequences
     VELOCITY = 4 # sequences per frame for score bars
     FADE_FRAMES = 10 # how long it takes to fade
 
@@ -164,8 +164,8 @@ class ScoreAnimation(object):
     def make_scorebar_animations(self):
         animations = []
         p1, p2 = self.p1, self.p2
-        p1_offset = 26 # edge of 4-panel
-        p2_offset = 185 # edge of 4-panel
+        p1_offset = 30 # edge of 4-panel
+        p2_offset = 181 # edge of 4-panel
 
         # constants used when creating animations
         v = ScoreAnimation.VELOCITY
@@ -179,7 +179,7 @@ class ScoreAnimation(object):
             s2 = ScoreBars(origin=lo+1, end_seq=p2_offset, color=self.p1.color, velocity=v)
 
             # make most recently-earned point flash
-            if self.awarded_player == 1 and i == self.p1.score - 1:
+            if self.awarded_player == 1 and i == 0:
                 s1.flashing = True
                 s2.flashing = True
 
