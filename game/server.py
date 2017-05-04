@@ -12,7 +12,7 @@ from threading import Thread
 
 thread_continuing = True
 
-def main(bridge, port = '8000'):
+def main(bridge, port = '8000', *args):
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serversocket.bind(('0.0.0.0', int(port)))
     serversocket.listen(2) # max 1 connection
